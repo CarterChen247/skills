@@ -1,0 +1,32 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/webapp",
+  "pr": 481,
+  "mode": "triage",
+  "assessed_at": "2026-10-19T03:02:58Z",
+  "head_sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "report_path": "<skill-dir>/evals/out/case-a/20261019T030258Z-triage.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "build", "state": "SUCCESS"}, {"name": "unit-tests", "state": "SUCCESS"}],
+  "scores": {"author_readiness": 1, "change_quality": "NOT_ASSESSED", "verification_confidence": 2, "operational_risk": 7},
+  "gates": {"G1": "PASS", "G2": "UNKNOWN", "G3": "UNKNOWN", "G4": "FAIL", "G5": "FAIL"},
+  "decision": {"readiness": "NEEDS_AUTHOR_INPUT", "merge": "COMMENT", "owner": "BOTH"},
+  "issues": [
+    {"id": "C1", "category": "CONTEXT_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Empty PR description; no intent, scope, rollout or review focus", "location": null, "owner": "AUTHOR", "next_action": "Add goal, scope, data flow, rollout and reading order"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "No test files among 35 changed files for new behavior", "location": null, "owner": "AUTHOR", "next_action": "Add tests for routing, quiet hours, digest job, PUT validation, migration"},
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "emailDigest 'off' sends every email immediately; may contradict opt-out intent", "location": "src/services/notificationService.ts:sendNotification", "owner": "AUTHOR", "next_action": "Clarify semantics of 'off'"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Users created after backfill may lack prefs row; null deref in sendNotification", "location": "src/services/notificationService.ts:sendNotification", "owner": "BOTH", "next_action": "Read prefsService.get and src/db/models/user.ts"},
+    {"id": "D3", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Digest job drains queue before send; failure loses items", "location": "src/jobs/digestMailer.ts:runDigest", "owner": "BOTH", "next_action": "Read full job and digestQueue; add failure test"},
+    {"id": "D4", "category": "CODE_DEFECT", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "PUT validation lacks type/integer checks", "location": "src/api/notificationPrefs.ts:PUT /me/notification-prefs", "owner": "AUTHOR", "next_action": "Add type validation"},
+    {"id": "R1", "category": "DESIGN_RISK", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Quiet hours evaluated in UTC; no stored timezone", "location": "src/services/notificationService.ts:inQuietHours", "owner": "BOTH", "next_action": "Author states intended timezone handling"},
+    {"id": "R2", "category": "DESIGN_RISK", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Full-table backfill, no down migration, new job, no flag/rollback; unexplained deps", "location": "src/db/migrations/0042_add_notification_prefs.sql", "owner": "BOTH", "next_action": "Author supplies rollout/rollback plan"},
+    {"id": "V2", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "New settings UI without screenshots or manual steps", "location": "src/ui/settings/NotificationsPanel.tsx", "owner": "AUTHOR", "next_action": "Add screenshots"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Triage spot-check only; 1 of 5 risk paths read in full; no head access", "location": null, "owner": "REVIEWER", "next_action": "Run --mode full with head file access"}
+  ],
+  "risk_paths": [
+    {"path": "src/services/notificationService.ts:sendNotification,inQuietHours", "inspected": false},
+    {"path": "src/jobs/digestMailer.ts:runDigest", "inspected": false},
+    {"path": "src/db/migrations/0042_add_notification_prefs.sql", "inspected": true},
+    {"path": "src/db/models/user.ts + prefsService.get/update", "inspected": false},
+    {"path": "src/api/notificationPrefs.ts", "inspected": false}
+  ]
+}

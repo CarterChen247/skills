@@ -1,0 +1,38 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/webapp",
+  "pr": 481,
+  "mode": "triage",
+  "assessed_at": "2026-10-19T03:09:35Z",
+  "head_sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "report_path": "<skill-dir>/evals/out/case-a/20261019T030935Z-triage.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "build", "state": "SUCCESS"}, {"name": "unit-tests", "state": "SUCCESS"}],
+  "scores": {"author_readiness": 1, "change_quality": "NOT_ASSESSED", "verification_confidence": 1, "operational_risk": 7},
+  "score_breakdown": {
+    "author_readiness": {"intent": 0, "scope": 0, "verification": 0, "risks": 0, "focus": 0},
+    "change_quality": null,
+    "verification_confidence": {"ci": 1, "coverage": 0, "integration": 0, "manual": 0, "traceability": 0},
+    "operational_risk": {"impact": "M", "blast": "H", "reversibility": "H", "security": "M", "data": "M", "cross_system": "M", "deploy": "M"}
+  },
+  "gates": {"G1": "PASS", "G2": "UNKNOWN", "G3": "PASS", "G4": "FAIL", "G5": "FAIL"},
+  "decision": {"readiness": "NEEDS_AUTHOR_INPUT", "merge": "COMMENT", "owner": "AUTHOR"},
+  "issues": [
+    {"id": "C1", "category": "CONTEXT_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Empty description, no linked issue, wip commits", "location": null, "owner": "AUTHOR", "next_action": "Write description with intent, scope, reading order"},
+    {"id": "C2", "category": "CONTEXT_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Unexplained switch of existing users to weekly digest; 'off' semantics unclear", "location": "src/db/migrations/0042_add_notification_prefs.sql:3", "owner": "AUTHOR", "next_action": "State intended default behavior"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "No tests for any new behavior", "location": null, "owner": "AUTHOR", "next_action": "Add tests and verification summary"},
+    {"id": "V2", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "Required checks unknown (protection 403)", "location": null, "owner": "REVIEWER", "next_action": "Ask maintainer for required check list"},
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "BLOCKER", "status": "HYPOTHESIS", "summary": "New users lack prefs row; sendNotification may throw", "location": "src/services/notificationService.ts:sendNotification", "owner": "REVIEWER", "next_action": "Read prefsService.get and user creation"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Quiet hours evaluated in UTC", "location": "src/services/notificationService.ts:inQuietHours", "owner": "AUTHOR", "next_action": "Confirm timezone intent"},
+    {"id": "D3", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Urgent push dropped during quiet hours", "location": "src/services/notificationService.ts:sendNotification", "owner": "AUTHOR", "next_action": "Confirm intent"},
+    {"id": "D4", "category": "CODE_DEFECT", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "PUT lacks type validation", "location": "src/api/notificationPrefs.ts:PUT", "owner": "AUTHOR", "next_action": "Add type checks"},
+    {"id": "R1", "category": "DESIGN_RISK", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Bulk backfill, no down migration or rollout notes", "location": "src/db/migrations/0042_add_notification_prefs.sql:10", "owner": "BOTH", "next_action": "Provide migration plan and rollback"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MAJOR", "status": "CONFIRMED", "summary": "1 of 5 risk paths inspected", "location": null, "owner": "REVIEWER", "next_action": "Run full mode"}
+  ],
+  "risk_paths": [
+    {"path": "src/db/migrations/0042_add_notification_prefs.sql", "inspected": true},
+    {"path": "src/services/notificationService.ts:sendNotification,inQuietHours", "inspected": false},
+    {"path": "src/api/notificationPrefs.ts:PUT", "inspected": false},
+    {"path": "src/jobs/digestMailer.ts:runDigest", "inspected": false},
+    {"path": "src/db/models/user.ts", "inspected": false}
+  ]
+}

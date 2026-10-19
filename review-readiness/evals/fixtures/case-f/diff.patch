@@ -1,0 +1,70 @@
+diff --git a/src/webhooks/refundHandler.ts b/src/webhooks/refundHandler.ts
+--- a/src/webhooks/refundHandler.ts
++++ b/src/webhooks/refundHandler.ts
+@@ -10,10 +10,25 @@ export interface StripeEvent {
+-export async function handleRefundEvent(event: StripeEvent): Promise<void> {
+-  const refund = event.data.object;
+-  await db.transaction((tx) => applyRefund(tx, refund.charge, refund.amount));
+-}
++/**
++ * Handles `charge.refunded` webhooks. Stripe may deliver the same event more than once,
++ * so we record processed event IDs and skip duplicates.
++ */
++export async function handleRefundEvent(event: StripeEvent): Promise<"processed" | "duplicate"> {
++  const refund = event.data.object;
++
++  const seen = await db.processedEvents.findOne({ eventId: event.id });
++  if (seen) {
++    logger.info("duplicate refund event", { eventId: event.id });
++    return "duplicate";
++  }
++
++  await db.transaction(async (tx) => {
++    await applyRefund(tx, refund.charge, refund.amount);
++    await tx.processedEvents.insert({ eventId: event.id, processedAt: new Date() });
++  });
++
++  return "processed";
++}
+diff --git a/src/db/migrations/0043_processed_events.sql b/src/db/migrations/0043_processed_events.sql
+new file mode 100644
+--- /dev/null
++++ b/src/db/migrations/0043_processed_events.sql
+@@ -0,0 +1,5 @@
++CREATE TABLE processed_events (
++  event_id     TEXT NOT NULL,
++  processed_at TIMESTAMPTZ NOT NULL
++);
++CREATE UNIQUE INDEX idx_processed_events_event_id ON processed_events(event_id);
+diff --git a/tests/webhooks/refundHandler.test.ts b/tests/webhooks/refundHandler.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/webhooks/refundHandler.test.ts
+@@ -0,0 +1,27 @@
++import { handleRefundEvent } from "../../src/webhooks/refundHandler";
++import { db, resetDb, seedCharge } from "../helpers";
++
++const evt = { id: "evt_1", type: "charge.refunded", data: { object: { id: "re_1", charge: "ch_1", amount: 500 } } };
++
++beforeEach(async () => { await resetDb(); await seedCharge({ id: "ch_1", customerId: "cus_1", amount: 2000 }); });
++
++test("applies a refund once", async () => {
++  expect(await handleRefundEvent(evt)).toBe("processed");
++  expect(await db.balances.get("cus_1")).toBe(500);
++});
++
++test("redelivery of the same event is a no-op", async () => {
++  expect(await handleRefundEvent(evt)).toBe("processed");
++  expect(await handleRefundEvent(evt)).toBe("duplicate");
++  expect(await db.balances.get("cus_1")).toBe(500);
++});
++
++test("concurrent deliveries apply once", async () => {
++  const results = await Promise.allSettled([handleRefundEvent(evt), handleRefundEvent(evt)]);
++  expect(results.filter((r) => r.status === "fulfilled" && r.value === "processed")).toHaveLength(1);
++  expect(await db.balances.get("cus_1")).toBe(500);
++});
++
++test("rejects unknown charge", async () => {
++  await expect(handleRefundEvent({ ...evt, data: { object: { ...evt.data.object, charge: "ch_x" } } })).rejects.toThrow();
++});

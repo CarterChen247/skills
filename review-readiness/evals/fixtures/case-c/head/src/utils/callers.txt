@@ -1,0 +1,4 @@
+# Output of `grep -rn formatBytes src/` at head (provided by fixture in lieu of local clone)
+src/utils/formatBytes.ts:7:export function formatBytes(bytes: number, decimals = 1): string {
+src/ui/files/FileRow.tsx:14:      <span className="size">{formatBytes(file.size)}</span>
+src/ui/upload/UploadDialog.tsx:52:  const label = `${file.name} (${formatBytes(file.size)})`;

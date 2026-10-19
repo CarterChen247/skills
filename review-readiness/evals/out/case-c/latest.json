@@ -1,0 +1,33 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/webapp",
+  "pr": 405,
+  "mode": "full",
+  "assessed_at": "2026-10-19T03:09:23Z",
+  "head_sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+  "report_path": "<skill-dir>/evals/out/case-c/20261019T030923Z-full.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "test", "state": "SUCCESS"}],
+  "scores": {
+    "author_readiness": 10,
+    "change_quality": 9,
+    "verification_confidence": 9,
+    "operational_risk": 1
+  },
+  "score_breakdown": {
+    "author_readiness": {"intent": 2, "scope": 2, "verification": 3, "risks": 2, "focus": 1},
+    "change_quality": {"correctness": 2, "security": 2, "contracts": 2, "architecture": 2, "complexity": 1},
+    "verification_confidence": {"ci": 3, "coverage": 3, "integration": 2, "manual": 0, "traceability": 1},
+    "operational_risk": {"impact": "L", "blast": "L", "reversibility": "L", "security": "L", "data": "L", "cross_system": "L", "deploy": "L"}
+  },
+  "gates": {"G1": "PASS", "G2": "PASS", "G3": "PASS", "G4": "PASS", "G5": "PASS"},
+  "decision": {"readiness": "READY_FOR_REVIEW", "merge": "APPROVE_CANDIDATE", "owner": "REVIEWER"},
+  "issues": [
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "MINOR", "status": "CONFIRMED", "summary": "PRE-EXISTING, latent: 0<bytes<1 yields index -1 -> '512.0 undefined'", "location": "src/utils/formatBytes.ts:10", "owner": "AUTHOR", "next_action": "Optional lower clamp Math.max(0, ...)"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MINOR", "status": "CONFIRMED", "summary": "PRE-EXISTING: near-boundary rounding 1048575 -> '1024.0 KB'", "location": "src/utils/formatBytes.ts:11", "owner": "AUTHOR", "next_action": "Optional unit promotion when rounded value >= 1024"},
+    {"id": "D3", "category": "CODE_DEFECT", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "PRE-EXISTING: float log ratio at exact 1024^3/1024^4 may floor one unit low", "location": "src/utils/formatBytes.ts:10", "owner": "AUTHOR", "next_action": "Add 1024**3, 1024**4 test rows"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "jest config/package.json unreadable; suite inclusion inferred", "location": null, "owner": "REVIEWER", "next_action": "Check CI run 7001 log lists formatBytes.test.ts"},
+    {"id": "V2", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "UI screenshot not viewed", "location": null, "owner": "REVIEWER", "next_action": "View screenshot in PR body"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MINOR", "status": "CONFIRMED", "summary": "Callers seen only via grep lines", "location": "src/ui/files/FileRow.tsx:14", "owner": "REVIEWER", "next_action": "Skim FileRow.tsx:14 and UploadDialog.tsx:52"}
+  ],
+  "risk_paths": [{"path": "src/utils/formatBytes.ts:formatBytes", "inspected": true}]
+}

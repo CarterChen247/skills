@@ -1,0 +1,36 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/billing",
+  "pr": 512,
+  "mode": "recheck",
+  "assessed_at": "2026-10-19T03:03:04Z",
+  "head_sha": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+  "report_path": "<skill-dir>/evals/out/case-f/20261019T030304Z-recheck.md",
+  "checks": [
+    {"name": "lint", "state": "SUCCESS"},
+    {"name": "test", "state": "SUCCESS"},
+    {"name": "migrations-check", "state": "SUCCESS"}
+  ],
+  "scores": {
+    "author_readiness": 10,
+    "change_quality": 9,
+    "verification_confidence": 9,
+    "operational_risk": 7
+  },
+  "gates": {"G1": "PASS", "G2": "PASS", "G3": "PASS", "G4": "PASS", "G5": "PASS"},
+  "decision": {"readiness": "READY_FOR_REVIEW", "merge": "APPROVE_CANDIDATE", "owner": "REVIEWER"},
+  "issues": [
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "BLOCKER", "status": "RESOLVED", "summary": "Dedupe key mismatch (event.id vs refund.id); fixed in f6f6f6a.", "location": "src/webhooks/refundHandler.ts:18,26", "owner": "AUTHOR", "next_action": "None"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "RESOLVED", "summary": "Seeded duplicate test replaced by end-to-end redelivery test; CI test green (run 9960).", "location": "tests/webhooks/refundHandler.test.ts:13-17", "owner": "AUTHOR", "next_action": "None"},
+    {"id": "R1", "category": "DESIGN_RISK", "severity": "MINOR", "status": "RESOLVED", "summary": "UNIQUE index added on processed_events.event_id; concurrency test added.", "location": "src/db/migrations/0043_processed_events.sql:5", "owner": "AUTHOR", "next_action": "None"},
+    {"id": "C1", "category": "CONTEXT_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "PR body Verification section stale (says 3 tests, links run 9911).", "location": null, "owner": "AUTHOR", "next_action": "Update description to 4 tests / run 9960."},
+    {"id": "R2", "category": "DESIGN_RISK", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "Events first delivered pre-deploy have no processed_events row; post-deploy redelivery would re-apply.", "location": "src/webhooks/refundHandler.ts:18", "owner": "BOTH", "next_action": "Deploy note or backfill of recent event IDs."},
+    {"id": "R3", "category": "DESIGN_RISK", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "Unique-violation on concurrent duplicate relies on route mapping the error to 500 (route not readable).", "location": null, "owner": "REVIEWER", "next_action": "Read POST /webhooks/stripe error handling."},
+    {"id": "R4", "category": "DESIGN_RISK", "severity": "MINOR", "status": "HYPOTHESIS", "summary": "Pre-existing: charge.refunded payload modeled as Refund object rather than Charge; out of scope.", "location": "src/webhooks/refundHandler.ts:8", "owner": "REVIEWER", "next_action": "Optional follow-up issue."}
+  ],
+  "risk_paths": [
+    {"path": "src/webhooks/refundHandler.ts:handleRefundEvent", "inspected": true},
+    {"path": "src/billing/refunds.ts:applyRefund", "inspected": true},
+    {"path": "src/db/migrations/0043_processed_events.sql", "inspected": true}
+  ]
+}

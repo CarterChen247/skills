@@ -1,0 +1,50 @@
+{
+ "number": 405,
+ "title": "Fix formatBytes for 0, negative, and >1024 TB inputs",
+ "url": "https://github.com/acme/webapp/pull/405",
+ "body": "Fixes #402: empty files show \"NaN undefined\" in the file list.\n\n**Cause:** `Math.log(0)` is `-Infinity`, so the unit index was `-Infinity` for 0-byte files. Values \u2265 1024 TB also indexed past the units array.\n\n**Change:** `formatBytes` now returns `\"0 B\"` for 0, `\"\u2014\"` for negative/non-finite input, and clamps the unit index to TB. Display-only helper; used in `FileRow` and `UploadDialog`. No API or storage changes.\n\n**Verification:** Added table-driven tests in `tests/utils/formatBytes.test.ts` (0, 1, 1023, 1024, 1536, 1 MB, 1024 TB clamp, -5, NaN, Infinity). CI `test` job runs the full jest suite. Screenshot of file list with a 0-byte file attached below.\n\n![file list](https://user-images.githubusercontent.com/example/zero-byte.png)\n\n**Review focus:** the clamp on line 10.",
+ "author": {
+  "login": "dev-c"
+ },
+ "state": "OPEN",
+ "isDraft": false,
+ "baseRefName": "main",
+ "headRefName": "fix/format-bytes",
+ "headRefOid": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+ "additions": 22,
+ "deletions": 3,
+ "changedFiles": 2,
+ "files": [
+  {
+   "path": "src/utils/formatBytes.ts",
+   "additions": 6,
+   "deletions": 3
+  },
+  {
+   "path": "tests/utils/formatBytes.test.ts",
+   "additions": 16,
+   "deletions": 0
+  }
+ ],
+ "commits": [
+  {
+   "oid": "c3c3c3c",
+   "messageHeadline": "Fix formatBytes edge cases (#402)"
+  }
+ ],
+ "labels": [
+  {
+   "name": "bug"
+  }
+ ],
+ "reviewDecision": "REVIEW_REQUIRED",
+ "reviews": [],
+ "comments": [],
+ "closingIssuesReferences": [
+  {
+   "number": 402
+  }
+ ],
+ "mergeable": "MERGEABLE",
+ "mergeStateStatus": "BLOCKED"
+}

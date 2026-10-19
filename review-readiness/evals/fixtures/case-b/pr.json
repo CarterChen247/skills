@@ -1,0 +1,59 @@
+{
+ "number": 512,
+ "title": "Dedupe Stripe refund webhooks (fix double refunds, INC-2291)",
+ "url": "https://github.com/acme/billing/pull/512",
+ "body": "## Problem\nStripe retries `charge.refunded` webhooks on timeouts (at-least-once delivery). Today `handleRefundEvent` has no dedupe, so a redelivered event credits the customer balance twice. Incident INC-2291 (2 customers double-refunded last month). Closes #377.\n\n## Approach\n- New `processed_events` table (migration 0043, additive only).\n- Before applying, look up the event in `processed_events`; if present, return `duplicate`.\n- Apply refund and record the event in the **same DB transaction**, so a crash between the two can't leave a half-applied state.\n\n## Data flow\nStripe \u2192 `POST /webhooks/stripe` \u2192 `handleRefundEvent(event)` \u2192 dedupe lookup \u2192 `applyRefund(tx, charge, amount)` + insert `processed_events` (one txn) \u2192 200.\n\nNot changed: signature verification, other event types, `applyRefund` itself.\n\n## Verification\n- `npm test -- tests/webhooks/refundHandler.test.ts` \u2014 3 tests: single apply, duplicate skipped, unknown charge rejected. CI `test` job green: https://github.com/acme/billing/actions/runs/9911\n- Ran migration up/down locally on a copy of staging schema.\n\n## Risks / rollback\n- Migration is additive; rollback = revert PR + drop table.\n- Review focus: the dedupe lookup/insert in `refundHandler.ts` \u2014 that is the whole point of the PR.",
+ "author": {
+  "login": "dev-b"
+ },
+ "state": "OPEN",
+ "isDraft": false,
+ "baseRefName": "main",
+ "headRefName": "fix/refund-dedupe",
+ "headRefOid": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+ "additions": 44,
+ "deletions": 2,
+ "changedFiles": 3,
+ "files": [
+  {
+   "path": "src/webhooks/refundHandler.ts",
+   "additions": 17,
+   "deletions": 2
+  },
+  {
+   "path": "src/db/migrations/0043_processed_events.sql",
+   "additions": 5,
+   "deletions": 0
+  },
+  {
+   "path": "tests/webhooks/refundHandler.test.ts",
+   "additions": 22,
+   "deletions": 0
+  }
+ ],
+ "commits": [
+  {
+   "oid": "b2b2b2b",
+   "messageHeadline": "Add processed_events table and refund webhook dedupe"
+  },
+  {
+   "oid": "b2b2b2c",
+   "messageHeadline": "Add refund handler tests"
+  }
+ ],
+ "labels": [
+  {
+   "name": "billing"
+  }
+ ],
+ "reviewDecision": "REVIEW_REQUIRED",
+ "reviews": [],
+ "comments": [],
+ "closingIssuesReferences": [
+  {
+   "number": 377
+  }
+ ],
+ "mergeable": "MERGEABLE",
+ "mergeStateStatus": "BLOCKED"
+}

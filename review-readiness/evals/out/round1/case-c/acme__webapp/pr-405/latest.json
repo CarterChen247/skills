@@ -1,0 +1,30 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/webapp",
+  "pr": 405,
+  "mode": "full",
+  "assessed_at": "2026-10-19T03:03:11Z",
+  "head_sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+  "report_path": "<skill-dir>/evals/out/case-c/acme__webapp/pr-405/20261019T030311Z-full.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "test", "state": "SUCCESS"}],
+  "scores": {
+    "author_readiness": 10,
+    "change_quality": 9,
+    "verification_confidence": 9,
+    "operational_risk": 2
+  },
+  "gates": {"G1": "PASS", "G2": "PASS", "G3": "PASS", "G4": "PASS", "G5": "PASS"},
+  "decision": {"readiness": "READY_FOR_REVIEW", "merge": "APPROVE_CANDIDATE", "owner": "REVIEWER"},
+  "issues": [
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "MINOR", "status": "CONFIRMED",
+     "summary": "formatBytes(0.5) returns '512.0 undefined' (negative unit index); unreachable from current callers", "location": "src/utils/formatBytes.ts:10", "owner": "AUTHOR", "next_action": "Optional: Math.max(0, ...) on index + test row"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MINOR", "status": "CONFIRMED",
+     "summary": "Pre-existing boundary rounding: 1048575 -> '1024.0 KB'", "location": "src/utils/formatBytes.ts:10-12", "owner": "AUTHOR", "next_action": "Optional follow-up issue"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "HYPOTHESIS",
+     "summary": "CI workflow unreadable; confirm test job ran formatBytes.test.ts", "location": null, "owner": "REVIEWER", "next_action": "Check run 7001 log"}
+  ],
+  "risk_paths": [
+    {"path": "src/utils/formatBytes.ts:formatBytes", "inspected": true},
+    {"path": "tests/utils/formatBytes.test.ts", "inspected": true}
+  ]
+}

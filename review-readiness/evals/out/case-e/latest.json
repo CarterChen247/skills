@@ -1,0 +1,38 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/shop",
+  "pr": 890,
+  "mode": "full",
+  "assessed_at": "2026-10-19T03:09:46Z",
+  "head_sha": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+  "report_path": "<skill-dir>/evals/out/case-e/20261019T030946Z-full.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "test", "state": "SUCCESS"}, {"name": "build", "state": "SUCCESS"}],
+  "scores": {"author_readiness": 3, "change_quality": "NOT_ASSESSED", "verification_confidence": 2, "operational_risk": 9},
+  "score_breakdown": {
+    "author_readiness": {"intent": 1, "scope": 1, "verification": 0, "risks": 0, "focus": 1},
+    "change_quality": null,
+    "verification_confidence": {"ci": 1, "coverage": 1, "integration": 0, "manual": 0, "traceability": 0},
+    "operational_risk": {"impact": "H", "blast": "H", "reversibility": "H", "security": "M", "data": "H", "cross_system": "H", "deploy": "H"}
+  },
+  "gates": {"G1": "PASS", "G2": "UNKNOWN", "G3": "PASS", "G4": "FAIL", "G5": "FAIL"},
+  "decision": {"readiness": "NEEDS_AUTHOR_INPUT", "merge": "COMMENT", "owner": "BOTH"},
+  "issues": [
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "No test or run evidence for backfill 0051 or orders.status drop 0052", "location": "src/db/migrations/0051_backfill_order_events.sql", "owner": "AUTHOR", "next_action": "Provide backfill dry run and status/projection parity results"},
+    {"id": "V2", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "'Unit tests for every handler' contradicted: no tests for handler19-22", "location": "src/orders/events/handlers/handler19.ts", "owner": "AUTHOR", "next_action": "Add tests for handler19-22"},
+    {"id": "V3", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "New eventStore.ts (+410) has no tests", "location": "src/orders/eventStore.ts", "owner": "AUTHOR", "next_action": "Add event store tests (append, concurrency, duplicates)"},
+    {"id": "C1", "category": "CONTEXT_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "No rollback/deploy plan or risk notes for irreversible column drop; design doc external/unreadable", "location": "src/db/migrations/0052_drop_orders_status.sql", "owner": "AUTHOR", "next_action": "Summarize design and rollback/deploy order in PR"},
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Duplicate OrderPlaced would reset a paid order to placed (state ignored)", "location": "src/orders/events/handlers/handler01.ts:5", "owner": "REVIEWER", "next_action": "Read eventStore.ts for duplicate-event protection"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "OrderPaid silently ignored when status != placed", "location": "src/orders/events/handlers/handler02.ts:5", "owner": "AUTHOR", "next_action": "State intended semantics for out-of-state OrderPaid"},
+    {"id": "R1", "category": "DESIGN_RISK", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Backfill and column drop in one deploy; no expand/contract or rollback", "location": "src/db/migrations/0052_drop_orders_status.sql", "owner": "BOTH", "next_action": "Split drop into follow-up PR or document deploy order"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Diff 406; 4 of 5 risk paths unreadable; 20/22 handlers and 8 projections unread", "location": null, "owner": "REVIEWER", "next_action": "Fetch pull/890/head locally (with permission) and read all risk paths"},
+    {"id": "I2", "category": "REVIEW_INCOMPLETE", "severity": "MINOR", "status": "CONFIRMED", "summary": "Required checks 403; CI workflow unread so test scope unknown", "location": null, "owner": "REVIEWER", "next_action": "Ask maintainer for required checks and test job scope"},
+    {"id": "C2", "category": "CONTEXT_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "package-lock.json +900/-300 unexplained", "location": "package-lock.json", "owner": "AUTHOR", "next_action": "Explain dependency changes"}
+  ],
+  "risk_paths": [
+    {"path": "src/orders/events/handlers/handler01-22.ts (sampled 01,02)", "inspected": true},
+    {"path": "src/db/migrations/0051_backfill_order_events.sql", "inspected": false},
+    {"path": "src/db/migrations/0052_drop_orders_status.sql", "inspected": false},
+    {"path": "src/orders/eventStore.ts", "inspected": false},
+    {"path": "src/orders/api.ts + orderService.ts", "inspected": false}
+  ]
+}

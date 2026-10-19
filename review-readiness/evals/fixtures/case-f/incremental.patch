@@ -1,0 +1,30 @@
+# Equivalent of: git diff b2b2b2b2..f6f6f6f6
+diff --git a/src/webhooks/refundHandler.ts b/src/webhooks/refundHandler.ts
+@@ -24,5 +24,5 @@
+   await db.transaction(async (tx) => {
+     await applyRefund(tx, refund.charge, refund.amount);
+-    await tx.processedEvents.insert({ eventId: refund.id, processedAt: new Date() });
++    await tx.processedEvents.insert({ eventId: event.id, processedAt: new Date() });
+   });
+diff --git a/src/db/migrations/0043_processed_events.sql b/src/db/migrations/0043_processed_events.sql
+@@ -5 +5 @@
+-CREATE INDEX idx_processed_events_event_id ON processed_events(event_id);
++CREATE UNIQUE INDEX idx_processed_events_event_id ON processed_events(event_id);
+diff --git a/tests/webhooks/refundHandler.test.ts b/tests/webhooks/refundHandler.test.ts
+@@ -12,7 +12,13 @@
+-test("skips an event that was already processed", async () => {
+-  await db.processedEvents.insert({ eventId: "evt_1", processedAt: new Date() });
+-  expect(await handleRefundEvent(evt)).toBe("duplicate");
+-  expect(await db.balances.get("cus_1")).toBe(0);
+-});
++test("redelivery of the same event is a no-op", async () => {
++  expect(await handleRefundEvent(evt)).toBe("processed");
++  expect(await handleRefundEvent(evt)).toBe("duplicate");
++  expect(await db.balances.get("cus_1")).toBe(500);
++});
++
++test("concurrent deliveries apply once", async () => {
++  const results = await Promise.allSettled([handleRefundEvent(evt), handleRefundEvent(evt)]);
++  expect(results.filter((r) => r.status === "fulfilled" && r.value === "processed")).toHaveLength(1);
++  expect(await db.balances.get("cus_1")).toBe(500);
++});

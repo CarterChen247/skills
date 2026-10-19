@@ -1,0 +1,26 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/billing",
+  "pr": 512,
+  "mode": "full",
+  "assessed_at": "2026-10-19T03:02:58Z",
+  "head_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "report_path": "<skill-dir>/evals/out/case-b/20261019T030258Z-full.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "test", "state": "SUCCESS"}, {"name": "migrations-check", "state": "SUCCESS"}],
+  "scores": {"author_readiness": 10, "change_quality": 3, "verification_confidence": 6, "operational_risk": 8},
+  "gates": {"G1": "FAIL", "G2": "PASS", "G3": "UNKNOWN", "G4": "PASS", "G5": "FAIL"},
+  "decision": {"readiness": "NEEDS_AUTHOR_INPUT", "merge": "REQUEST_CHANGES", "owner": "AUTHOR"},
+  "issues": [
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "BLOCKER", "status": "CONFIRMED", "summary": "Dedupe inserts refund.id but looks up event.id; redeliveries double-refund", "location": "src/webhooks/refundHandler.ts:26", "owner": "AUTHOR", "next_action": "Insert eventId: event.id; add same-event-twice regression test"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Check-then-act race: lookup outside txn, no UNIQUE on event_id", "location": "src/webhooks/refundHandler.ts:18", "owner": "AUTHOR", "next_action": "UNIQUE/PK on processed_events.event_id; atomic insert-first inside txn"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "No test exercises real redelivery; duplicate test pre-seeds row", "location": "tests/webhooks/refundHandler.test.ts:13", "owner": "AUTHOR", "next_action": "Add test calling handler twice with same event (and concurrent variant)"},
+    {"id": "V2", "category": "VERIFICATION_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "Migration up/down AUTHOR_REPORTED; no down migration in diff", "location": "src/db/migrations/0043_processed_events.sql", "owner": "AUTHOR", "next_action": "Add down migration or explain"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MINOR", "status": "CONFIRMED", "summary": "Caller route POST /webhooks/stripe not readable; return-type change untraced", "location": null, "owner": "REVIEWER", "next_action": "Read route; confirm 200 on duplicate and concurrency model"}
+  ],
+  "risk_paths": [
+    {"path": "src/webhooks/refundHandler.ts:handleRefundEvent", "inspected": true},
+    {"path": "src/db/migrations/0043_processed_events.sql", "inspected": true},
+    {"path": "tests/webhooks/refundHandler.test.ts", "inspected": true},
+    {"path": "POST /webhooks/stripe route (caller)", "inspected": false}
+  ]
+}

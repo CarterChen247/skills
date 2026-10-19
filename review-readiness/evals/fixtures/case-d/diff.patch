@@ -1,0 +1,41 @@
+diff --git a/src/http/authMiddleware.ts b/src/http/authMiddleware.ts
+--- a/src/http/authMiddleware.ts
++++ b/src/http/authMiddleware.ts
+@@ -8,6 +8,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
++  // Internal services (payouts worker) authenticate via header.
++  const svc = req.header("X-Internal-Service");
++  if (svc && INTERNAL_SERVICES.includes(svc)) {
++    req.principal = { kind: "service", name: svc };
++    return next();
++  }
++
+   const token = req.header("Authorization")?.replace(/^Bearer /, "");
+-  if (!token) return res.status(401).end();
++  if (!token) return res.status(401).json({ error: "unauthenticated" });
+   req.principal = verifyJwt(token);
+   next();
+diff --git a/src/ledger/transfer.ts b/src/ledger/transfer.ts
+--- a/src/ledger/transfer.ts
++++ b/src/ledger/transfer.ts
+@@ -1,30 +1,67 @@
+-export async function transfer(from: string, to: string, amount: number) {
+-  const src = await db.accounts.get(from);
+-  if (src.balance < amount) throw new InsufficientFunds();
+-  await db.accounts.debit(from, amount);
+-  await db.accounts.credit(to, amount);
+-}
++export async function transfer(from: string, to: string, amount: number, idemKey?: string) {
++  if (amount <= 0) throw new InvalidAmount();
++  return withSerializableRetry(async (tx) => {
++    const [a, b] = [from, to].sort();
++    const locked = await tx.query("SELECT id, balance FROM accounts WHERE id IN ($1,$2) ORDER BY id FOR UPDATE", [a, b]);
++    const src = locked.find((r) => r.id === from);
++    if (!src) throw new UnknownAccount(from);
++    if (src.balance < amount) throw new InsufficientFunds();
++    await tx.accounts.debit(from, amount);
++    await tx.accounts.credit(to, amount);
++    await notifyTransfer(from, to, amount); // emits webhook to partner
++    return { ok: true };
++  }, { maxAttempts: 5 });
++}
+# ... src/db/txn.ts (+41/-3, defines withSerializableRetry), src/http/routes/internal.ts and tests/ledger/transfer.test.ts are present in the PR but omitted from this fixture's diff (not yet inspected)

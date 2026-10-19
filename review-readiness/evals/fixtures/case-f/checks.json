@@ -1,0 +1,21 @@
+[
+ {
+  "name": "lint",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI"
+ },
+ {
+  "name": "test",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI",
+  "link": "https://github.com/acme/billing/actions/runs/9960"
+ },
+ {
+  "name": "migrations-check",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI"
+ }
+]

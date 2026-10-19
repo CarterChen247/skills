@@ -1,0 +1,340 @@
+{
+ "number": 890,
+ "title": "Event-sourced order pipeline",
+ "url": "https://github.com/acme/shop/pull/890",
+ "body": "Refactors the order pipeline to an event-sourced model (design doc: https://acme.atlassian.net/wiki/ORD-ES). Orders are now derived from `order_events`; `orders.status` is dropped in favor of a projection.\n\nGenerated protobuf types included. Unit tests added for every handler.",
+ "author": {
+  "login": "dev-e"
+ },
+ "state": "OPEN",
+ "isDraft": false,
+ "baseRefName": "main",
+ "headRefName": "feat/order-es",
+ "headRefOid": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+ "additions": 25389,
+ "deletions": 1520,
+ "changedFiles": 56,
+ "files": [
+  {
+   "path": "src/orders/events/handlers/handler01.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler02.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler03.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler04.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler05.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler06.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler07.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler08.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler09.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler10.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler11.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler12.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler13.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler14.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler15.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler16.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler17.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler18.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler19.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler20.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler21.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/events/handlers/handler22.ts",
+   "additions": 120,
+   "deletions": 10
+  },
+  {
+   "path": "src/orders/projections/proj1.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj2.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj3.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj4.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj5.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj6.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj7.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/projections/proj8.ts",
+   "additions": 180,
+   "deletions": 40
+  },
+  {
+   "path": "src/orders/eventStore.ts",
+   "additions": 410,
+   "deletions": 0
+  },
+  {
+   "path": "src/orders/orderService.ts",
+   "additions": 220,
+   "deletions": 610
+  },
+  {
+   "path": "src/orders/api.ts",
+   "additions": 95,
+   "deletions": 70
+  },
+  {
+   "path": "src/db/migrations/0050_order_events.sql",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "src/db/migrations/0051_backfill_order_events.sql",
+   "additions": 140,
+   "deletions": 0
+  },
+  {
+   "path": "src/db/migrations/0052_drop_orders_status.sql",
+   "additions": 4,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler01.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler02.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler03.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler04.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler05.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler06.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler07.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler08.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler09.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler10.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler11.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler12.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler13.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler14.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler15.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler16.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler17.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "tests/orders/events/handler18.test.ts",
+   "additions": 60,
+   "deletions": 0
+  },
+  {
+   "path": "src/generated/orderEvents.pb.ts",
+   "additions": 18400,
+   "deletions": 0
+  },
+  {
+   "path": "package-lock.json",
+   "additions": 900,
+   "deletions": 300
+  }
+ ],
+ "commits": [
+  {
+   "oid": "e5e5e00",
+   "messageHeadline": "event store"
+  },
+  {
+   "oid": "e5e5e01",
+   "messageHeadline": "handlers"
+  },
+  {
+   "oid": "e5e5e02",
+   "messageHeadline": "projections"
+  },
+  {
+   "oid": "e5e5e03",
+   "messageHeadline": "migrations"
+  },
+  {
+   "oid": "e5e5e04",
+   "messageHeadline": "tests"
+  },
+  {
+   "oid": "e5e5e05",
+   "messageHeadline": "regen protos"
+  },
+  {
+   "oid": "e5e5e06",
+   "messageHeadline": "fix tests"
+  },
+  {
+   "oid": "e5e5e07",
+   "messageHeadline": "drop status column"
+  }
+ ],
+ "labels": [],
+ "reviewDecision": "REVIEW_REQUIRED",
+ "reviews": [],
+ "comments": [],
+ "closingIssuesReferences": [],
+ "mergeable": "MERGEABLE",
+ "mergeStateStatus": "BLOCKED"
+}

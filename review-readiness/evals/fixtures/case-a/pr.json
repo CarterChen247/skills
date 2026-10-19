@@ -1,0 +1,215 @@
+{
+ "number": 481,
+ "title": "notifications update",
+ "url": "https://github.com/acme/webapp/pull/481",
+ "body": "",
+ "author": {
+  "login": "dev-a"
+ },
+ "state": "OPEN",
+ "isDraft": false,
+ "baseRefName": "main",
+ "headRefName": "feat/notif",
+ "headRefOid": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+ "additions": 2156,
+ "deletions": 191,
+ "changedFiles": 35,
+ "files": [
+  {
+   "path": "src/api/notificationPrefs.ts",
+   "additions": 142,
+   "deletions": 0
+  },
+  {
+   "path": "src/api/routes.ts",
+   "additions": 6,
+   "deletions": 1
+  },
+  {
+   "path": "src/services/notificationService.ts",
+   "additions": 188,
+   "deletions": 64
+  },
+  {
+   "path": "src/db/migrations/0042_add_notification_prefs.sql",
+   "additions": 14,
+   "deletions": 0
+  },
+  {
+   "path": "src/db/models/user.ts",
+   "additions": 22,
+   "deletions": 3
+  },
+  {
+   "path": "src/jobs/digestMailer.ts",
+   "additions": 210,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/settings/NotificationsPanel.tsx",
+   "additions": 264,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/settings/index.tsx",
+   "additions": 9,
+   "deletions": 2
+  },
+  {
+   "path": "src/ui/hooks/useNotificationPrefs.ts",
+   "additions": 77,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle1.tsx",
+   "additions": 31,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle2.tsx",
+   "additions": 32,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle3.tsx",
+   "additions": 33,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle4.tsx",
+   "additions": 34,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle5.tsx",
+   "additions": 35,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle6.tsx",
+   "additions": 36,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle7.tsx",
+   "additions": 37,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle8.tsx",
+   "additions": 38,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle9.tsx",
+   "additions": 39,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle10.tsx",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle11.tsx",
+   "additions": 41,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle12.tsx",
+   "additions": 42,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle13.tsx",
+   "additions": 43,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle14.tsx",
+   "additions": 44,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle15.tsx",
+   "additions": 45,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle16.tsx",
+   "additions": 46,
+   "deletions": 0
+  },
+  {
+   "path": "src/ui/components/notifications/Toggle17.tsx",
+   "additions": 47,
+   "deletions": 0
+  },
+  {
+   "path": "src/i18n/locales/lang1.json",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "src/i18n/locales/lang2.json",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "src/i18n/locales/lang3.json",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "src/i18n/locales/lang4.json",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "src/i18n/locales/lang5.json",
+   "additions": 40,
+   "deletions": 0
+  },
+  {
+   "path": "package.json",
+   "additions": 3,
+   "deletions": 1
+  },
+  {
+   "path": "package-lock.json",
+   "additions": 310,
+   "deletions": 120
+  },
+  {
+   "path": "src/ui/settings/NotificationsPanel.stories.tsx",
+   "additions": 48,
+   "deletions": 0
+  },
+  {
+   "path": "README.md",
+   "additions": 0,
+   "deletions": 0
+  }
+ ],
+ "commits": [
+  {
+   "oid": "a1a1a1a",
+   "messageHeadline": "wip"
+  },
+  {
+   "oid": "a1a1a1b",
+   "messageHeadline": "more changes"
+  },
+  {
+   "oid": "a1a1a1a1",
+   "messageHeadline": "fix"
+  }
+ ],
+ "labels": [],
+ "reviewDecision": "REVIEW_REQUIRED",
+ "reviews": [],
+ "comments": [],
+ "closingIssuesReferences": [],
+ "mergeable": "MERGEABLE",
+ "mergeStateStatus": "BLOCKED"
+}

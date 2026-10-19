@@ -1,0 +1,40 @@
+diff --git a/src/utils/formatBytes.ts b/src/utils/formatBytes.ts
+--- a/src/utils/formatBytes.ts
++++ b/src/utils/formatBytes.ts
+@@ -1,9 +1,13 @@
+ const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+ 
+-/** Human-readable byte size for display only (file list, upload dialog). */
++/**
++ * Human-readable byte size for display only (file list, upload dialog).
++ * 0 → "0 B"; negative or non-finite → "—".
++ */
+ export function formatBytes(bytes: number, decimals = 1): string {
+-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
++  if (!Number.isFinite(bytes) || bytes < 0) return "—";
++  if (bytes === 0) return "0 B";
++  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), UNITS.length - 1);
+   const value = bytes / Math.pow(1024, i);
+   return `${value.toFixed(i === 0 ? 0 : decimals)} ${UNITS[i]}`;
+ }
+diff --git a/tests/utils/formatBytes.test.ts b/tests/utils/formatBytes.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/utils/formatBytes.test.ts
+@@ -0,0 +1,16 @@
++import { formatBytes } from "../../src/utils/formatBytes";
++
++test.each([
++  [0, "0 B"],
++  [1, "1 B"],
++  [1023, "1023 B"],
++  [1024, "1.0 KB"],
++  [1536, "1.5 KB"],
++  [1024 ** 2, "1.0 MB"],
++  [1024 ** 5, "1024.0 TB"],
++  [-5, "—"],
++  [NaN, "—"],
++  [Infinity, "—"],
++])("formatBytes(%p) = %p", (input, expected) => {
++  expect(formatBytes(input)).toBe(expected);
++});

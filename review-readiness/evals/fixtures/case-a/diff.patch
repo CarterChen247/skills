@@ -1,0 +1,90 @@
+diff --git a/src/db/migrations/0042_add_notification_prefs.sql b/src/db/migrations/0042_add_notification_prefs.sql
+new file mode 100644
+--- /dev/null
++++ b/src/db/migrations/0042_add_notification_prefs.sql
+@@ -0,0 +1,14 @@
++CREATE TABLE notification_prefs (
++  user_id     BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
++  email_digest TEXT NOT NULL DEFAULT 'weekly',
++  push_enabled BOOLEAN NOT NULL DEFAULT TRUE,
++  quiet_start SMALLINT NULL,
++  quiet_end   SMALLINT NULL,
++  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
++);
++
++-- backfill: every existing user gets defaults
++INSERT INTO notification_prefs (user_id)
++SELECT id FROM users
++ON CONFLICT DO NOTHING;
++
+diff --git a/src/api/notificationPrefs.ts b/src/api/notificationPrefs.ts
+new file mode 100644
+--- /dev/null
++++ b/src/api/notificationPrefs.ts
+@@ -0,0 +1,40 @@
++import { Router } from "express";
++import { requireUser } from "../auth/requireUser";
++import { prefsService } from "../services/notificationService";
++
++export const notificationPrefsRouter = Router();
++
++notificationPrefsRouter.get("/me/notification-prefs", requireUser, async (req, res) => {
++  const prefs = await prefsService.get(req.user.id);
++  res.json(prefs);
++});
++
++notificationPrefsRouter.put("/me/notification-prefs", requireUser, async (req, res) => {
++  const { emailDigest, pushEnabled, quietStart, quietEnd } = req.body ?? {};
++  if (emailDigest && !["off", "daily", "weekly"].includes(emailDigest)) {
++    return res.status(400).json({ error: "invalid emailDigest" });
++  }
++  if (quietStart != null && (quietStart < 0 || quietStart > 23)) {
++    return res.status(400).json({ error: "invalid quietStart" });
++  }
++  if (quietEnd != null && (quietEnd < 0 || quietEnd > 23)) {
++    return res.status(400).json({ error: "invalid quietEnd" });
++  }
++  const updated = await prefsService.update(req.user.id, { emailDigest, pushEnabled, quietStart, quietEnd });
++  res.json(updated);
++});
+diff --git a/src/services/notificationService.ts b/src/services/notificationService.ts
+--- a/src/services/notificationService.ts
++++ b/src/services/notificationService.ts
+@@ -12,18 +12,40 @@ import { db } from "../db";
+-export async function sendNotification(userId: number, msg: Message) {
+-  await push.send(userId, msg);
+-  await email.send(userId, msg);
+-}
++export async function sendNotification(userId: number, msg: Message) {
++  const prefs = await prefsService.get(userId);
++  if (prefs.pushEnabled && !inQuietHours(prefs, new Date())) {
++    await push.send(userId, msg);
++  }
++  if (prefs.emailDigest === "off" || msg.urgent) {
++    await email.send(userId, msg);
++  } else {
++    await digestQueue.enqueue(userId, msg);
++  }
++}
++
++export function inQuietHours(p: Prefs, now: Date): boolean {
++  if (p.quietStart == null || p.quietEnd == null) return false;
++  const h = now.getUTCHours();
++  return p.quietStart <= p.quietEnd ? h >= p.quietStart && h < p.quietEnd : h >= p.quietStart || h < p.quietEnd;
++}
+diff --git a/src/jobs/digestMailer.ts b/src/jobs/digestMailer.ts
+new file mode 100644
+--- /dev/null
++++ b/src/jobs/digestMailer.ts
+@@ -0,0 +1,12 @@
++// Runs hourly. Sends queued digest emails for users whose digest window is due.
++export async function runDigest(now = new Date()) {
++  const due = await digestQueue.dueUsers(now);
++  for (const userId of due) {
++    const items = await digestQueue.drain(userId);
++    if (items.length) await email.sendDigest(userId, items);
++  }
++}
++
++# (remaining 32 files: UI components, i18n strings, stories, lockfile — omitted from fixture for brevity;
++#  treat them as present in the PR per pr.json and not inspected)

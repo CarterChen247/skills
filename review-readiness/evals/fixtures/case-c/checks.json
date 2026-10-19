@@ -1,0 +1,15 @@
+[
+ {
+  "name": "lint",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI"
+ },
+ {
+  "name": "test",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI",
+  "link": "https://github.com/acme/webapp/actions/runs/7001"
+ }
+]

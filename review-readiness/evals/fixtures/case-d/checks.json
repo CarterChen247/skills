@@ -1,0 +1,26 @@
+[
+ {
+  "name": "lint",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI"
+ },
+ {
+  "name": "unit",
+  "state": "SUCCESS",
+  "bucket": "pass",
+  "workflow": "CI"
+ },
+ {
+  "name": "integration",
+  "state": "SKIPPED",
+  "bucket": "skipping",
+  "workflow": "CI"
+ },
+ {
+  "name": "security-scan",
+  "state": "PENDING",
+  "bucket": "pending",
+  "workflow": "Security"
+ }
+]

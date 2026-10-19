@@ -1,0 +1,30 @@
+{
+  "schema": "review-readiness/v1",
+  "repo": "acme/billing",
+  "pr": 512,
+  "mode": "full",
+  "assessed_at": "2026-10-19T03:09:04Z",
+  "head_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "report_path": "<skill-dir>/evals/out/case-b/20261019T030904Z-full.md",
+  "checks": [{"name": "lint", "state": "SUCCESS"}, {"name": "test", "state": "SUCCESS"}, {"name": "migrations-check", "state": "SUCCESS"}],
+  "scores": {"author_readiness": 9, "change_quality": 3, "verification_confidence": 6, "operational_risk": 7},
+  "score_breakdown": {
+    "author_readiness": {"intent": 2, "scope": 2, "verification": 2, "risks": 2, "focus": 1},
+    "change_quality": {"correctness": 0, "security_data": 0, "contracts": 1, "architecture": 1, "complexity": 1, "capped_by_blocker": true},
+    "verification_confidence": {"ci": 2, "coverage": 1, "integration": 1, "manual": 1, "traceability": 1},
+    "operational_risk": {"impact": "H", "blast": "M", "reversibility": "M", "security": "L", "data": "H", "cross_system": "M", "deploy": "M"}
+  },
+  "gates": {"G1": "FAIL", "G2": "PASS", "G3": "PASS", "G4": "PASS", "G5": "FAIL"},
+  "decision": {"readiness": "NEEDS_AUTHOR_INPUT", "merge": "REQUEST_CHANGES", "owner": "AUTHOR"},
+  "issues": [
+    {"id": "D1", "category": "CODE_DEFECT", "severity": "BLOCKER", "status": "CONFIRMED", "summary": "Dedupe inserts refund.id but looks up event.id; redelivered event re-applies refund", "location": "src/webhooks/refundHandler.ts:26", "owner": "AUTHOR", "next_action": "Insert eventId: event.id; add double-call regression test"},
+    {"id": "V1", "category": "VERIFICATION_GAP", "severity": "MAJOR", "status": "CONFIRMED", "summary": "Duplicate test hand-seeds processed_events, masking D1", "location": "tests/webhooks/refundHandler.test.ts:13", "owner": "AUTHOR", "next_action": "Call handler twice with same event; assert balance 500"},
+    {"id": "D2", "category": "CODE_DEFECT", "severity": "MAJOR", "status": "HYPOTHESIS", "summary": "Check-then-act outside txn, no UNIQUE on event_id; concurrent redelivery may double-apply", "location": "src/webhooks/refundHandler.ts:18", "owner": "AUTHOR", "next_action": "UNIQUE(event_id) + insert-first inside txn"},
+    {"id": "C1", "category": "CONTEXT_GAP", "severity": "MINOR", "status": "CONFIRMED", "summary": "Verification claims overstate coverage; no down migration despite up/down claim", "location": null, "owner": "AUTHOR", "next_action": "Correct verification section"},
+    {"id": "I1", "category": "REVIEW_INCOMPLETE", "severity": "MINOR", "status": "CONFIRMED", "summary": "Route caller, db layer, test helpers unreadable; return type changed", "location": null, "owner": "REVIEWER", "next_action": "Read POST /webhooks/stripe handler"}
+  ],
+  "risk_paths": [
+    {"path": "src/webhooks/refundHandler.ts:handleRefundEvent", "inspected": true},
+    {"path": "src/db/migrations/0043_processed_events.sql", "inspected": true}
+  ]
+}

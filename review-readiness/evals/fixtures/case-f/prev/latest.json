@@ -1,0 +1,87 @@
+{
+ "schema": "review-readiness/v1",
+ "repo": "acme/billing",
+ "pr": 512,
+ "mode": "full",
+ "assessed_at": "2026-10-15T09:12:00Z",
+ "head_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+ "report_path": "(fixture)/20261015T091200Z-full.md",
+ "checks": [
+  {
+   "name": "lint",
+   "state": "SUCCESS"
+  },
+  {
+   "name": "test",
+   "state": "SUCCESS"
+  },
+  {
+   "name": "migrations-check",
+   "state": "SUCCESS"
+  }
+ ],
+ "scores": {
+  "author_readiness": 9,
+  "change_quality": 3,
+  "verification_confidence": 5,
+  "operational_risk": 7
+ },
+ "gates": {
+  "G1": "FAIL",
+  "G2": "PASS",
+  "G3": "PASS",
+  "G4": "PASS",
+  "G5": "FAIL"
+ },
+ "decision": {
+  "readiness": "NEEDS_AUTHOR_INPUT",
+  "merge": "REQUEST_CHANGES",
+  "owner": "AUTHOR"
+ },
+ "issues": [
+  {
+   "id": "D1",
+   "category": "CODE_DEFECT",
+   "severity": "BLOCKER",
+   "status": "CONFIRMED",
+   "summary": "Dedupe lookup uses event.id (evt_) but insert stores refund.id (re_); lookup never matches, so every Stripe redelivery re-applies the refund (double credit).",
+   "location": "src/webhooks/refundHandler.ts:18,26",
+   "owner": "AUTHOR",
+   "next_action": "Store eventId: event.id; add a test that delivers the same event twice through handleRefundEvent."
+  },
+  {
+   "id": "V1",
+   "category": "VERIFICATION_GAP",
+   "severity": "MAJOR",
+   "status": "CONFIRMED",
+   "summary": "'duplicate' test seeds processed_events manually with evt_1, masking D1; no end-to-end redelivery test.",
+   "location": "tests/webhooks/refundHandler.test.ts:13",
+   "owner": "AUTHOR",
+   "next_action": "Replace with a test calling handleRefundEvent twice and asserting balance == 500."
+  },
+  {
+   "id": "R1",
+   "category": "DESIGN_RISK",
+   "severity": "MINOR",
+   "status": "HYPOTHESIS",
+   "summary": "No unique constraint on processed_events.event_id; two concurrent deliveries can both pass the lookup.",
+   "location": "src/db/migrations/0043_processed_events.sql:5",
+   "owner": "AUTHOR",
+   "next_action": "Use a UNIQUE index so the second txn fails and rolls back."
+  }
+ ],
+ "risk_paths": [
+  {
+   "path": "src/webhooks/refundHandler.ts:handleRefundEvent",
+   "inspected": true
+  },
+  {
+   "path": "src/billing/refunds.ts:applyRefund",
+   "inspected": true
+  },
+  {
+   "path": "src/db/migrations/0043_processed_events.sql",
+   "inspected": true
+  }
+ ]
+}
