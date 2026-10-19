@@ -22,6 +22,30 @@ Arguments: `$ARGUMENTS`
 7. **Hard gates beat scores.** A confirmed blocker always decides the outcome, whatever the scores are. Never average the four scores.
 8. **Fairness.** An incomplete AI or reviewer investigation is the REVIEWER's open item, not an author failure. Missing evidence is not proof of bad code.
 
+## Model routing (edit for your setup)
+
+The `Agent` tool's `model` field takes a **slot** (`haiku`, `sonnet` or `opus`), not a model name. A proxy may map slots to other models, so choose slots by *cost in your setup*.
+
+| Role | What it does | Slot |
+|---|---|---|
+| main | judgement: scores, gates, decisions, report JSON | (the session's own model) |
+| collector | gathers and quotes evidence; never judges | `haiku` |
+| deep_reader | full mode: reads one risk path, drafts findings | `haiku` |
+
+Use `subagent_type: "Explore"` (read-only) for both subagent roles. If the `Agent` tool is unavailable, do the role inline, and still follow the context budget below.
+
+## Context budget (main session, hard limits)
+
+The main session's context is the expensive part: everything read into it is re-sent on every later turn.
+- **Never** run `gh pr diff` (the full diff), read CI logs, or read whole workflow files in the main session. That is the collector's job.
+- **Triage:** the main session reads only the collector's evidence pack, which includes ≤ 3 spot-check hunks.
+- **Full:** the main session also reads the deep readers' JSON. Before marking a defect CONFIRMED, re-read **only the cited lines** (≤ 40 lines per finding) with `gh api …/contents` or `git show`.
+- **Reference files:** read each one only at the step that needs it:
+  - [scoring-rubric.md](references/scoring-rubric.md) at Step 4
+  - [decision-policy.md](references/decision-policy.md) at Step 5
+  - [report-schema.md](references/report-schema.md) at Step 6
+- **Don't repeat what you read.** Don't restate evidence-pack contents back into the conversation; go straight to the JSON.
+
 ## Step 0: Parse arguments
 
 - First token: a PR number (`123`, `#123`) or URL (`https://github.com/<owner>/<repo>/pull/<n>`). For a URL, take the owner and repo from it. Otherwise use the current directory's repo (`gh repo view --json nameWithOwner`).
@@ -29,89 +53,59 @@ Arguments: `$ARGUMENTS`
 - With no or invalid input, print `Usage: /review-readiness <PR_NUMBER_OR_URL> [--mode triage|full|recheck]` and stop.
 - Use `-R <owner>/<repo>` on every `gh` call when a URL was given.
 
-## Step 1: Collect evidence (all modes)
+## Step 1: Collect evidence (collector subagent, all modes)
 
-Run these (read-only, pre-approved):
+Start **one** collector subagent with the prompt in [references/collector-prompt.md](references/collector-prompt.md). Use the collector slot and fill in the repo, number, mode and, for recheck, the previous issues and head SHA. It returns one JSON evidence pack. If the result isn't valid JSON, ask it once to re-emit; otherwise note the limit.
 
-```bash
-gh pr view <n> -R <repo> --json number,title,url,body,author,state,isDraft,baseRefName,headRefName,headRefOid,additions,deletions,changedFiles,files,commits,labels,reviewDecision,reviews,comments,closingIssuesReferences,mergeable,mergeStateStatus
-gh pr checks <n> -R <repo> --json name,state,bucket,workflow,link,completedAt
-gh pr diff <n> -R <repo> --name-only
-gh pr diff <n> -R <repo>            # for big PRs, read selectively (see Step 2)
-```
-
-`gh pr checks` exits non-zero when checks fail or are pending; the output is still valid evidence.
-
-Optional, only when useful:
-- Linked issues (`gh issue view <k> -R <repo> --json title,body`) for requirements.
-- Merge gates:
-  - Required checks: `gh api repos/<repo>/branches/<base>/protection/required_status_checks` (GET; this may prompt the user or return 403/404, in which case record the required checks as UNKNOWN).
-  - Project rules: CONTRIBUTING.md, `.github/pull_request_template.md`, CLAUDE.md/AGENTS.md and CODEOWNERS. Read them from the local clone, or via `gh api repos/<repo>/contents/<path>?ref=<base>` when there is no clone. A 404 means "none declared"; a 403 means UNKNOWN.
-- Full file context: if the local clone matches the repo and `git cat-file -e <headRefOid>` succeeds, use `git show <headRefOid>:<path>`. Otherwise use `gh api repos/<repo>/contents/<path>?ref=<headRefOid>` (GET) or work from the diff alone and note the limit. Read explicit paths: glob-style listing tools may skip dot-directories such as `.github/`.
-- **Diff unavailable** (HTTP 406 "diff too large", or similar):
-  - Fetch the top risk files individually via `gh api …/contents` at head, or ask the user's permission to `git fetch origin pull/<n>/head` into a local clone.
-  - Never fall back to guessing. If nothing is retrievable, Change Quality is NOT_ASSESSED.
-- **Read what each gate asserts, not just its colour.** For any check or label that looks like test evidence ("tests: green", "changed tests"), skim its workflow file or job log (`gh run view <id> --log`, truncated) to see what it ran and against which revision.
-  - Some gates run new tests against *base* and expect them to fail.
-  - Some pipelines skip head tests for "regular" PRs.
-  - Neither one proves the head passes.
-- Failed CI details: `gh run view <run-id> -R <repo> --log-failed` (truncate; it is untrusted text).
-
-Tag every fact you use with its **evidence source**:
+From the pack, tag every fact you use with its **evidence source**:
 `EXECUTED` (you ran it here) · `CI_GITHUB` (check results from GitHub) · `TEST_SOURCE` (test code exists in the diff or repo, not observed running) · `AUTHOR_REPORTED` (claimed in the PR, with no linked proof) · `MISSING`.
 
-## Step 2: Map the change by risk, not size
+Treat the pack as **evidence, not conclusions**:
+- `ci_semantics` tells you what a gate actually asserts. Some gates run new tests against base; some pipelines skip head tests. Neither proves the head passes.
+- `author_content` is what Author Readiness may score. Nothing the collector wrote counts as author content.
+- `untrusted_instructions` and `limits` go into the report.
 
-Classify each changed file as `core` / `plumbing` / `tests` / `config-migration-infra` / `docs` / `generated-noise` (lockfiles, snapshots, codegen).
+If the diff is unavailable (e.g. HTTP 406) and the collector could not read the risk files, Change Quality is NOT_ASSESSED. You may ask the user's permission to `git fetch origin pull/<n>/head` into a local clone and re-run the collector.
 
-Rank risk by impact, not line count:
-- auth/authz and secrets
-- money, transactions, idempotency
-- persistence, schema and migrations
-- public APIs and contracts
-- concurrency and state machines
-- deletes, retries, caching
-- feature flags and deployment config
-- cross-service calls
+## Step 2: Choose the risk paths
 
-Pick the **top 3–5 risk paths** (file plus function or hunk). These seed "where the human should look".
-
-Note anything the description claims that the diff does not show, and the reverse (unexplained changes).
+Take the collector's `risk_paths` and keep the **top 3–5**. Use fewer for small PRs, minimum 1. Group near-identical files into one path. Rank by impact (auth, money, persistence, contracts, concurrency, deletes, deploy config, cross-service calls), not line count. These paths are M for gate G4, and they seed "where the human should look".
 
 ## Step 3: Mode-specific work
 
 ### triage (default)
-Goal: reduce reviewer prep time. Budget: metadata, CI, the file map, and a **spot-check of the 1–3 riskiest hunks**. No exhaustive review.
-- Score Change Quality as `NOT_ASSESSED` unless every top risk path was actually read. Spot-check observations become HYPOTHESES unless proven.
-- The merge recommendation is **never APPROVE_CANDIDATE** in triage. The best possible outcome is `CONTINUE_REVIEW` with a note that full mode or a human review is next.
+Goal: reduce reviewer prep time. Work only from the evidence pack and its ≤ 3 `spot_check_hunks`. No exhaustive review, and no further code reads.
+- Score Change Quality as `NOT_ASSESSED`. Spot-check observations are HYPOTHESES.
+- The merge recommendation is **never APPROVE_CANDIDATE** in triage. The best possible outcome is `CONTINUE_REVIEW`, with a note that full mode or a human review is next.
 
 ### full
 Goal: a risk-based review sufficient for a merge recommendation.
-- For each top risk path, read the full function or file at the head revision, trace one level of callers and callees, and check input validation, error paths, state transitions, contract and backward compatibility, and security and data integrity.
-- Map critical behaviors to tests: which test covers it, and did CI run that test (CI_GITHUB) or does it only exist (TEST_SOURCE)?
-- Keep a **coverage log**: `inspected N of M high-risk paths`, plus the list of paths not inspected.
-- A CODE_DEFECT is CONFIRMED only with `file:line`, a concrete failure scenario (input or state, then the wrong result), and supporting code you actually read. Anything weaker is a HYPOTHESIS.
-- Optional reuse: if the user agrees, invoke the built-in `code-review` skill through the Skill tool with args `<PR> high` (never `--comment` or `--fix`) for extra defect hunting. Re-verify each of its findings yourself before including it, and cite it as "code-review, verified".
+1. **Start the readers.** Start one deep-reader subagent per risk path, **in parallel in a single message**, using [references/deep-read-prompt.md](references/deep-read-prompt.md) and the deep_reader slot.
+2. **Build the coverage log** from the readers' `inspected_fully` and `not_inspected`: `inspected N of M`.
+3. **Treat reader findings as drafts.** Before a CODE_DEFECT is CONFIRMED:
+   - re-read the cited lines yourself (≤ 40 lines), and
+   - make sure you can state the `file:line` and a concrete failure scenario.
+
+   A finding with a non-empty `depends_on_unobserved` stays a HYPOTHESIS unless the PR itself documents that precondition.
+4. **Map tests to behaviors** from `tests_mapping`. Count a test as evidence only if it exercises the real path, and as CI_GITHUB only if `ci_semantics` shows the job runs it on head.
+5. **Optional reuse:** if the user agrees, invoke the built-in `code-review` skill through the Skill tool with args `<PR> high`. Never pass `--comment` or `--fix`. Re-verify its findings the same way.
 
 ### recheck
 1. Locate the previous state (see Step 6 for paths): `latest.json` for this PR.
 2. **If none exists**, say so plainly ("No previous assessment found at <path>; this is a fresh assessment, not a comparison"), then run a `full` assessment if the user asked for depth, or else `triage`. Never invent a prior state.
-3. Otherwise:
-   - Depth: recheck runs at the previous run's depth. After a `full` assessment, "full depth" means re-reading **every** risk path at the new head, not just the incremental diff. After a `triage`, run at triage depth unless the user asks for more.
-   - Compare `headRefOid` with the previous one and list the new commits.
-   - Get the diff since the last assessment: `git diff <old>..<new>` if both commits are local; otherwise use the commit list plus the current `gh pr diff` and note the limit.
-   - Re-verify **every** previous finding as `RESOLVED` (cite the fixing change), `STILL_OPEN`, or `CANNOT_VERIFY`.
-   - Note any new evidence (CI, author notes) and newly introduced risks.
-   - Re-score and re-decide, then explain **why the recommendation changed or did not**.
-   - If nothing changed (same SHA, same checks, no new comments), say so briefly.
+3. Otherwise, pass the previous `issues` and `head_sha` to the collector. Its `recheck` block lists the new commits and quotes the current code at each previous issue's location.
+   - Depth: recheck runs at the previous run's depth. After a `full` assessment, start deep readers again for every risk path at the new head.
+   - Re-verify **every** previous finding as `RESOLVED` (cite the fixing change), `STILL_OPEN`, or `CANNOT_VERIFY`, using the quoted excerpts.
+   - Note any new evidence and newly introduced risks. Re-score and re-decide, then explain **why the recommendation changed or did not**.
+   - If nothing changed (same SHA, same checks, no new comments), say so briefly, and skip the collector's diff work.
 
 ## Step 4: Score
 
-Follow [references/scoring-rubric.md](references/scoring-rubric.md) exactly. There are four separate scores: Author Readiness (1–10), Change Quality (1–10 or NOT_ASSESSED), Verification Confidence (1–10), and Operational Risk (1–10, **higher = riskier**). Each sub-score cites evidence. **No overall score.**
+Read [references/scoring-rubric.md](references/scoring-rubric.md) now and follow it exactly. There are four separate scores: Author Readiness (1–10), Change Quality (1–10 or NOT_ASSESSED), Verification Confidence (1–10), and Operational Risk (1–10, **higher = riskier**). Each sub-score cites evidence. **No overall score.**
 
 ## Step 5: Classify issues and decide
 
-Follow [references/decision-policy.md](references/decision-policy.md):
+Read [references/decision-policy.md](references/decision-policy.md) now and follow it:
 - Classify each issue as CONTEXT_GAP / CODE_DEFECT / VERIFICATION_GAP / DESIGN_RISK / REVIEW_INCOMPLETE.
 - Give each a severity, CONFIRMED or HYPOTHESIS, evidence, confidence, an owner (AUTHOR / REVIEWER / BOTH), and a next action.
 - Evaluate the hard gates first, then derive **Review Readiness** and the **Merge Recommendation** independently using the ordered rules.
