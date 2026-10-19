@@ -74,6 +74,20 @@ You can also just ask, e.g. "is PR 512 ready for review?". The skill auto-trigge
   - `latest.json`: overwritten with a copy of the JSON; it is the state that `recheck` reads.
 - The HTML is produced by `scripts/render_report.py` (Python 3, standard library only). It HTML-escapes all text, because reports quote untrusted PR content.
 
+## Cost and model routing
+
+The expensive part is the **main session's context**: everything read into it is re-sent on every later turn. The skill therefore splits the work:
+
+| Role | Default slot | Reads |
+|---|---|---|
+| collector | `haiku` | metadata, the per-file diff, CI workflows and logs, project rules; returns a compact JSON evidence pack |
+| deep_reader (full mode) | `haiku`, one per risk path, run in parallel | the full functions plus callers; returns draft findings |
+| main | the session's model | only the evidence pack and the readers' JSON; re-reads ≤ 40 cited lines before confirming a defect |
+| renderer | none (a Python script) | the report JSON |
+
+- **Slots are not model names.** If you route Claude Code through a proxy (e.g. the `sonnet` slot is mapped to a different provider's model), edit the **Model routing** table at the top of `SKILL.md` so that the subagent roles use your cheapest capable slot.
+- **Never route a subagent role to the same expensive slot as the main session.** Doing so adds cost instead of saving it.
+
 ## Safety model
 - **Read-only.** It never comments, approves, requests changes, merges, pushes, commits, checks out or edits.
 - **Pre-approved tools** (`allowed-tools`): only read-only `gh pr view/diff/checks`, `gh run view`, `gh repo view`, `gh issue view`, `git log/show/diff/rev-parse/remote/cat-file`, and Read/Grep/Glob.
@@ -103,6 +117,8 @@ SKILL.md                     workflow, modes, hard rules (loaded on invocation)
 references/scoring-rubric.md the 4 dimensions, sub-criteria, evidence-source tags
 references/decision-policy.md issue taxonomy, hard gates, decision rules, owners
 references/report-schema.md   report JSON schema (v2), field rules, terminal summary format
+references/collector-prompt.md  prompt + output schema for the evidence-collector subagent
+references/deep-read-prompt.md  prompt + output schema for the full-mode deep-reader subagents
 scripts/render_report.py     validates the JSON and renders the self-contained HTML (stdlib only)
 evals/fixtures/case-{a..f}/  synthetic PRs for the 6 acceptance scenarios
 evals/expected.md            expected outcomes + fixture-mode substitution rules
