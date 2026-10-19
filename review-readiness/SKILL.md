@@ -2,7 +2,7 @@
 name: review-readiness
 description: "PR review decision support for a human reviewer. Assesses whether a GitHub PR is ready for review or merge, classifies what is missing (context gap, code defect, verification gap, design risk, incomplete review), scores four independent dimensions with evidence, and recommends a GitHub review action plus the next responsible owner. Use for 'is PR #123 ready for review', 'triage this PR', 'should I approve this PR', 'recheck PR after the author's update'. Not a line-by-line code reviewer and not a PR explainer."
 argument-hint: "<PR_NUMBER_OR_URL> [--mode triage|full|recheck]"
-allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(gh pr checks *) Bash(gh run view *) Bash(gh repo view *) Bash(gh issue view *) Bash(git log *) Bash(git show *) Bash(git diff *) Bash(git rev-parse *) Bash(git remote *) Bash(git cat-file *) Read Grep Glob
+allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(gh pr checks *) Bash(gh run view *) Bash(gh repo view *) Bash(gh issue view *) Bash(git log *) Bash(git show *) Bash(git diff *) Bash(git rev-parse *) Bash(git remote *) Bash(git cat-file *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/render_report.py *) Read Grep Glob
 ---
 
 # /review-readiness
@@ -118,15 +118,20 @@ Follow [references/decision-policy.md](references/decision-policy.md):
 
 ## Step 6: Report and persist
 
-First fix the UTC timestamp and the save path (below), because the report footer and `latest.json.report_path` both need them. Then render the report with [references/report-template.md](references/report-template.md).
-- **Print the main report** in the conversation. It should be readable in about 2 minutes. Its footer line is the only place the saved path is printed.
-- **Save** the main report, its Details appendix, and `latest.json` (the schema is in the template):
-  - If the cwd is a clone of the PR's repo (`git remote -v` matches), the base directory is `<repo-root>/.review-readiness/`. Before the first write, make sure `.review-readiness/` appears in `<repo-root>/.git/info/exclude` and append it if missing. This is the only change allowed in a reviewed repo; never touch `.gitignore`.
-  - Otherwise, the base directory is `~/.claude/review-readiness/`.
-  - Path: `<base>/<owner>__<repo>/pr-<n>/<YYYYMMDDTHHMMSSZ>-<mode>.md`, plus `<base>/<owner>__<repo>/pr-<n>/latest.json` (overwritten each run; keep the older `.md` files).
-- The saved `.md` is identical to what you printed, plus the Details appendix below the `---` rule.
+The schema and field rules are in [references/report-schema.md](references/report-schema.md).
 
-## Final self-check before printing
+1. **Choose the paths.** Fix the UTC timestamp `<ts>` (`YYYYMMDDTHHMMSSZ`) and the directory `<dir>` = `<base>/<owner>__<repo>/pr-<n>/`:
+   - If the cwd is a clone of the PR's repo (`git remote -v` matches), `<base>` is `<repo-root>/.review-readiness/`. Before the first write, make sure `.review-readiness/` appears in `<repo-root>/.git/info/exclude`, and append it if missing. This is the only change allowed in a reviewed repo; never touch `.gitignore`.
+   - Otherwise, `<base>` is `~/.claude/review-readiness/`.
+2. **Write the JSON.** Write the full report to `<dir>/<ts>-<mode>.json` with the Write tool, with `report_path` set to `<dir>/<ts>-<mode>.html`.
+3. **Render the HTML.** Run `python3 ${CLAUDE_SKILL_DIR}/scripts/render_report.py <dir>/<ts>-<mode>.json <dir>/<ts>-<mode>.html --open`.
+   - Exit code 2 means the JSON is invalid. Fix the listed problems and re-run.
+   - Never hand-write or edit the HTML.
+   - Omit `--open` if the user asked not to open a browser.
+4. **Update the state.** Copy the JSON to `<dir>/latest.json`. This is the state that `recheck` reads; keep older `<ts>-*` files.
+5. **Print only the terminal summary** defined at the bottom of report-schema.md (about 8 lines). The full report lives in the HTML. Print the full content in the conversation only if the user asks.
+
+## Final self-check before rendering
 
 - [ ] No GitHub write action was taken; the comment is only a draft.
 - [ ] Every PASS/FAIL checklist item and every sub-score cites evidence; unknowns are UNKNOWN, not FAIL.
@@ -135,3 +140,4 @@ First fix the UTC timestamp and the save path (below), because the report footer
 - [ ] Author Readiness points come only from author-supplied content.
 - [ ] No claim of "tests pass" without CI_GITHUB or EXECUTED evidence.
 - [ ] The scores were not averaged, and no score overrode a hard gate.
+- [ ] The HTML was produced by the renderer from valid JSON, and only the short summary was printed.

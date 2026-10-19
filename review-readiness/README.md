@@ -31,7 +31,9 @@ ln -s "$(pwd)/skills/review-readiness" ~/.claude/skills/review-readiness
 
 Claude Code picks up changes live, without a restart. Check that `/review-readiness` appears in the `/` menu.
 
-Requirements: the `gh` CLI, authenticated (`gh auth status`), with read access to the repos you review.
+Requirements:
+- the `gh` CLI, authenticated (`gh auth status`), with read access to the repos you review
+- `python3`, for the HTML renderer (preinstalled on macOS and most Linux distributions)
 
 ## Use
 
@@ -56,7 +58,8 @@ Examples:
 You can also just ask, e.g. "is PR 512 ready for review?". The skill auto-triggers from its description.
 
 ### What you get
-- A main report you can read in about 2 minutes. It has 14 sections; see `references/report-template.md`.
+- **An HTML report that opens in your browser.** It is one self-contained file with a colour-coded decision banner, four score cards, issue and checklist badges, a copy button for the review draft, and collapsible details. Its 14 sections are defined in `references/report-schema.md`.
+- A short summary of about 8 lines in the terminal: the decision, the scores, the top issues and the report path.
 - **Two separate decisions:** Review Readiness (`READY_FOR_REVIEW` / `NEEDS_AUTHOR_INPUT`) and a Merge Recommendation (`APPROVE_CANDIDATE` / `COMMENT` / `REQUEST_CHANGES` / `CONTINUE_REVIEW`), plus the next responsible owner.
 - **Four independent scores** that are never averaged: Author Readiness, Change Quality (or `NOT_ASSESSED`), Verification Confidence, and Operational Risk (higher means riskier).
 - **Classified issues:** `CONTEXT_GAP` / `CODE_DEFECT` / `VERIFICATION_GAP` / `DESIGN_RISK` / `REVIEW_INCOMPLETE`, each marked CONFIRMED or HYPOTHESIS.
@@ -65,7 +68,11 @@ You can also just ask, e.g. "is PR 512 ready for review?". The skill auto-trigge
 ### Where reports are saved
 - **Inside a clone of the PR's repo:** `<repo>/.review-readiness/<owner>__<repo>/pr-<n>/`. The first run adds `.review-readiness/` to `.git/info/exclude`, so reports are never committed. The tracked tree and `.gitignore` are not touched.
 - **Anywhere else:** `~/.claude/review-readiness/<owner>__<repo>/pr-<n>/`.
-- Each run writes `<UTC-timestamp>-<mode>.md` (the main report plus a Details appendix) and overwrites `latest.json`, the state that `recheck` reads.
+- Each run writes two files and overwrites one:
+  - `<UTC-timestamp>-<mode>.json`: the report data, the single source of truth.
+  - `<UTC-timestamp>-<mode>.html`: rendered from that JSON.
+  - `latest.json`: overwritten with a copy of the JSON; it is the state that `recheck` reads.
+- The HTML is produced by `scripts/render_report.py` (Python 3, standard library only). It HTML-escapes all text, because reports quote untrusted PR content.
 
 ## Safety model
 - **Read-only.** It never comments, approves, requests changes, merges, pushes, commits, checks out or edits.
@@ -95,11 +102,12 @@ The policy is in `references/decision-policy.md`. In short:
 SKILL.md                     workflow, modes, hard rules (loaded on invocation)
 references/scoring-rubric.md the 4 dimensions, sub-criteria, evidence-source tags
 references/decision-policy.md issue taxonomy, hard gates, decision rules, owners
-references/report-template.md report layout, Details appendix, latest.json schema
+references/report-schema.md   report JSON schema (v2), field rules, terminal summary format
+scripts/render_report.py     validates the JSON and renders the self-contained HTML (stdlib only)
 evals/fixtures/case-{a..f}/  synthetic PRs for the 6 acceptance scenarios
 evals/expected.md            expected outcomes + fixture-mode substitution rules
 evals/results.md             validation results (2 rounds)
-examples/                    sample triage report (fictional PR from eval case D)
+examples/                    sample report JSON + rendered HTML (fictional PR from eval case D)
 ```
 
 ## Maintain
