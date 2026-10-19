@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Render a review-readiness report JSON into a self-contained HTML page.
 
-Usage: render_report.py <report.json> <out.html> [--open]
+Usage: render_report.py <report.json> <out.html> [--open] [--no-time-check]
 
 All text from the JSON is HTML-escaped (it may quote untrusted PR content).
 Inline `code` and **bold** are the only formatting applied.
 Exits 2 with a list of problems if the JSON does not match the schema.
 Standard library only.
 """
+import datetime
 import html
 import json
 import re
 import subprocess
 import sys
+
+CHECK_TIME = True
 
 READINESS = {"READY_FOR_REVIEW", "NEEDS_AUTHOR_INPUT"}
 MERGE = {"APPROVE_CANDIDATE", "COMMENT", "REQUEST_CHANGES", "CONTINUE_REVIEW"}
@@ -116,6 +119,67 @@ def validate(d):
         errs.append("G4 is PASS but not every risk path is inspected")
     if d.get("mode") == "triage" and g4 == "PASS":
         errs.append("G4 is always FAIL in triage")
+    # Triage reads only spot-check hunks: nothing counts as a full read, so G1 cannot claim PASS
+    # and no defect can be CONFIRMED.
+    if d.get("mode") == "triage":
+        if n_in:
+            errs.append("triage: no risk path may be marked inspected (spot-checks are partial reads)")
+        if (gates.get("G1") or {}).get("result") == "PASS":
+            errs.append("triage: G1 must be UNKNOWN (0 risk paths fully inspected)")
+        for i, it in enumerate(d.get("issues") or []):
+            if it.get("category") == "CODE_DEFECT" and it.get("status") == "CONFIRMED":
+                errs.append(f"issues[{i}]: triage findings are HYPOTHESIS; use --mode full to confirm a defect")
+    elif rp and n_in == 0 and (gates.get("G1") or {}).get("result") == "PASS":
+        errs.append("G1 must be UNKNOWN when no risk path was fully inspected")
+    # Unreadable branch protection means the required set is unknown.
+    rcs = d.get("required_checks_status")
+    if rcs not in {"ok", "403", "404", "unknown"}:
+        errs.append("required_checks_status must be ok|403|404|unknown")
+    elif rcs in {"403", "unknown"} and (gates.get("G2") or {}).get("result") == "PASS":
+        errs.append(f"G2 cannot be PASS when required checks are unreadable ({rcs}); use UNKNOWN")
+    # BLOCKER is reserved for confirmed defects and real gate failures, not missing evidence.
+    for i, it in enumerate(d.get("issues") or []):
+        if it.get("status") == "CONFIRMED" and (it.get("severity") or "").startswith("BLOCKER") \
+                and it.get("category") != "CODE_DEFECT" and not it.get("gate_fail"):
+            errs.append(f"issues[{i}]: a CONFIRMED BLOCKER must be a CODE_DEFECT or a real gate FAIL "
+                        "(gate_fail: true); missing or pending evidence is MAJOR")
+    # Missing evidence is not failure: G2 FAIL needs a check that actually failed, and a
+    # pending/skipped check can't be re-counted as a G3 failure either.
+    failed_states = {"FAILURE", "ERROR", "TIMED_OUT", "STARTUP_FAILURE"}
+    checks = d.get("checks") or []
+    g2 = (gates.get("G2") or {}).get("result")
+    if g2 == "FAIL" and not any((c.get("state") or "").upper() in failed_states for c in checks):
+        errs.append("G2 is FAIL but no check in `checks` actually failed; pending/skipped/cancelled "
+                    "required checks make G2 UNKNOWN (plus a MAJOR VERIFICATION_GAP)")
+    g3 = gates.get("G3") or {}
+    if g3.get("result") == "FAIL":
+        not_run = [c.get("name") for c in checks
+                   if c.get("name") and (c.get("state") or "").upper() not in failed_states | {"SUCCESS"}]
+        if any(n and n in (g3.get("evidence") or "") for n in not_run):
+            errs.append("G3 FAIL cites a check that is pending/skipped; CI-check rules belong to G2 (UNKNOWN), "
+                        "G3 is for non-CI rules that are explicitly violated")
+    # Rule 1 both ways: REQUEST_CHANGES iff a G1-G3 gate FAILed.
+    any_fail = any((gates.get(g) or {}).get("result") == "FAIL" for g in ("G1", "G2", "G3"))
+    if dec.get("merge") == "REQUEST_CHANGES" and not any_fail:
+        errs.append("REQUEST_CHANGES requires G1, G2 or G3 to be FAIL (rule 1)")
+    if any_fail and dec.get("merge") != "REQUEST_CHANGES":
+        errs.append("a G1-G3 gate is FAIL, so the merge recommendation must be REQUEST_CHANGES (rule 1)")
+    # gate_fail must point at a gate that actually FAILed.
+    for i, it in enumerate(d.get("issues") or []):
+        if it.get("gate_fail"):
+            g = it.get("gate")
+            if g not in {"G1", "G2", "G3"} or (gates.get(g) or {}).get("result") != "FAIL":
+                errs.append(f"issues[{i}]: gate_fail needs \"gate\": \"G1|G2|G3\" naming a gate whose result is FAIL")
+    # The timestamp must come from the clock (`date -u`), not be invented.
+    if CHECK_TIME:
+        try:
+            ts = datetime.datetime.strptime(d.get("assessed_at", ""), "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=datetime.timezone.utc)
+            age = (datetime.datetime.now(datetime.timezone.utc) - ts).total_seconds()
+            if age > 2 * 3600 or age < -300:
+                errs.append("assessed_at is not the current UTC time; run `date -u +%Y-%m-%dT%H:%M:%SZ`")
+        except ValueError:
+            errs.append("assessed_at must be YYYY-MM-DDTHH:MM:SSZ from `date -u`")
     for k in d.get("low_evidence") or []:
         if k not in dict(SCORE_KEYS):
             errs.append(f"low_evidence key {k!r} is not a score dimension")
@@ -450,6 +514,8 @@ def render(d):
 
 
 def main(argv):
+    global CHECK_TIME
+    CHECK_TIME = "--no-time-check" not in argv
     args = [a for a in argv[1:] if not a.startswith("--")]
     if len(args) != 2:
         print(__doc__.strip().splitlines()[2], file=sys.stderr)

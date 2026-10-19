@@ -33,6 +33,8 @@ The **hard gates** are evaluated first. Scores inform the explanation but never 
 - **MAJOR**: should be resolved or explicitly accepted before merge.
 - **MINOR**: nice to fix; not decision-relevant.
 
+BLOCKER is only for (a) a CONFIRMED CODE_DEFECT that must be fixed before merge, or (b) an issue that *is* a gate FAIL (`gate_fail: true`, naming that gate). A required check that is pending or skipped is an UNKNOWN gate plus a MAJOR VERIFICATION_GAP, never a BLOCKER.
+
 For a HYPOTHESIS, give the severity *if confirmed* and write it as `BLOCKER (if confirmed)`. "High-impact hypothesis" means a hypothesis that would be MAJOR or BLOCKER if confirmed.
 
 Adjustments:
@@ -43,6 +45,7 @@ Adjustments:
 - **CODE_DEFECT CONFIRMED** means you read the code (or ran it) and can state the input or state, the path through `file:line`, and the wrong outcome.
   - If the scenario depends on runtime conditions you could not observe (deployment topology, ingress config, real concurrency), it stays a HYPOTHESIS. The one exception is a precondition the PR itself documents as normal. For example, if the author says "Stripe redelivers events", redelivery counts as established.
 - **Gap CONFIRMED** (CONTEXT, VERIFICATION, REVIEW_INCOMPLETE) means the absence was verified. For example, the body is empty, or no test file touches the path.
+- **If you can count it or quote it, it is CONFIRMED.** Examples: "18 of 22 handlers have tests", "the test inserts the row by hand at `test.ts:13`". Don't downgrade verifiable facts to HYPOTHESIS.
 - **HYPOTHESIS** is plausible but not demonstrated. A HYPOTHESIS can never trigger REQUEST_CHANGES on its own, but a high-impact hypothesis can force COMMENT or CONTINUE_REVIEW.
 
 ---
@@ -57,6 +60,8 @@ Adjustments:
 | G2 Required checks | All required checks completed successfully | A required check (from branch protection or project rules) **completed with failure/error** on head | The required set is unreadable (403) and nothing failed, **or** a required check is pending, skipped, cancelled, or never ran on head |
 | G3 Security or project gate | No mandated gate exists (files absent / 404 = "none declared"), or every mandated gate is met | A mandated gate is **explicitly violated** by the PR as it stands. Examples: CONTRIBUTING requires tests for bug fixes and the PR adds none; a required security scan *reports findings*; CODEOWNERS approval is impossible because the owner is the author | The gate's evidence is pending, skipped or unreadable (403) |
 | G4 Coverage | Every path in M was inspected | Fewer than all of M inspected (**always FAIL in triage**) | Not used |
+
+In **triage**, no path is fully inspected, so G1 is always UNKNOWN there. Triage cannot confirm a defect.
 | G5 Critical verification | Each critical behavior on a top-risk path has a test that targets it (TEST_SOURCE) **and** a CI_GITHUB or EXECUTED pass of a job that runs that test | Green CI exists but no test targets the behavior, or the head was never tested in CI or locally here | A targeting test exists and CI is green, but you can't establish that the job runs it |
 
 How to read the gates in specific cases:

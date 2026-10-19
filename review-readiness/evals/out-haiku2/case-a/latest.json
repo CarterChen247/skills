@@ -1,0 +1,483 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/webapp",
+  "pr": 481,
+  "url": "https://github.com/acme/webapp/pull/481",
+  "title": "notifications update",
+  "mode": "triage",
+  "assessed_at": "2026-10-19T06:40:35Z",
+  "head_sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "size": {
+    "additions": 2156,
+    "deletions": 191,
+    "files": 35
+  },
+  "report_path": "<skill-dir>/evals/out-haiku2/case-a/20261019T064035Z-triage.html",
+  "summary": [
+    "Adds notification preference system: new database table, API endpoints, and service-layer logic to control digest email frequency and push quiet hours.",
+    "Large scope: 35 files changed including UI components, i18n strings, database migration with backfill, and new hourly job.",
+    "No PR body provided; requires author context on design, rollback plan, and edge case handling."
+  ],
+  "decision": {
+    "readiness": "NEEDS_AUTHOR_INPUT",
+    "merge": "COMMENT",
+    "owner": "AUTHOR",
+    "why": [
+      "Rule 2: author-owned MAJOR CONTEXT_GAP (C1 — empty PR body blocks reviewer judgment on scope and risk).",
+      "Rule 3 does not apply due to rule 2 priority.",
+      "G4 FAIL (triage mode, not all paths inspected) also favors review continuation, but author input is needed first."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 1,
+    "change_quality": "NOT_ASSESSED",
+    "verification_confidence": 2,
+    "operational_risk": 8
+  },
+  "score_evidence": {
+    "author_readiness": "PR body empty (CONFIRMED); no intent, scope, or verification claims; commits are generic (wip, more changes, fix); all criteria score 0. Floored to 1.",
+    "change_quality": "NOT_ASSESSED: triage mode, top 3 risk paths identified but not fully inspected; diff shows plausible logic but unconfirmed. Coverage: 3/35 files spot-checked.",
+    "verification_confidence": "CI_GITHUB: lint, build, unit-tests passed; relevance to new behavior unclear (2 pts). No test evidence targeting notification prefs logic or migration (0 pts each for coverage, integration, traceability). Score: 2.",
+    "operational_risk": "Impact HIGH (user-facing feature), Blast radius HIGH (all users), Reversibility HIGH (new table + backfill, irreversible), Data integrity HIGH (schema write + backfill), Deployment MEDIUM. Sum: 11 → 8/10."
+  },
+  "low_evidence": [
+    "verification_confidence"
+  ],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Clear intent and requirements",
+        "points": 0,
+        "max": 2,
+        "evidence": "PR body is empty (CONFIRMED); no problem statement, goal, or acceptance criteria."
+      },
+      {
+        "criterion": "Scope and important data flows explained",
+        "points": 0,
+        "max": 2,
+        "evidence": "No description of what changed, which services are affected, or which flows are intentionally unchanged."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 0,
+        "max": 3,
+        "evidence": "No claim of testing, commands run, or results provided."
+      },
+      {
+        "criterion": "Known risks and reviewer guidance",
+        "points": 0,
+        "max": 2,
+        "evidence": "No mention of risks, rollback plan, or review focus."
+      },
+      {
+        "criterion": "Focused, reviewable scope",
+        "points": 1,
+        "max": 1,
+        "evidence": "Scope is large (2156 additions, 35 files) but changes are grouped by feature area (notification system). Single concern, though many files are UI noise (toggles, i18n). Awarded 1 point for single-concern grouping."
+      }
+    ],
+    "change_quality": [],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated test evidence",
+        "points": 2,
+        "max": 3,
+        "evidence": "Three CI checks passed: lint, build, unit-tests (CI_GITHUB). Relevance to new notification prefs behavior is unclear; no test names visible."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 0,
+        "max": 3,
+        "evidence": "No test evidence observed targeting the quiet-hours logic, email digest queue, or API endpoints."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 0,
+        "max": 2,
+        "evidence": "Migration backfill and API contracts not verified in triage."
+      },
+      {
+        "criterion": "Manual or UI verification",
+        "points": 0,
+        "max": 1,
+        "evidence": "No screenshots or manual testing evidence provided."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 0,
+        "max": 1,
+        "evidence": "CI checks are unlinked; no workflow or job log detail."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "H",
+        "evidence": "Notifications are user-facing; affects email and push delivery to all users."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "H",
+        "evidence": "Notification service is called from multiple places; changes affect all active users."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "H",
+        "evidence": "New table 0042_add_notification_prefs.sql with backfill is difficult to reverse; data migration is irreversible if rolled back."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "H",
+        "evidence": "Backfill to existing users; sendNotification now depends on prefs table state."
+      },
+      {
+        "factor": "Deployment and recovery",
+        "level": "M",
+        "evidence": "New job (digestMailer) needs to be scheduled; no feature flag visible for gradual rollout."
+      }
+    ]
+  },
+  "primary_classification": "Mainly CONTEXT_GAP (empty PR body) + VERIFICATION_GAP (unknown required checks). Code defect status unresolved in triage.",
+  "issues": [
+    {
+      "id": "C1",
+      "category": "CONTEXT_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "AUTHOR",
+      "summary": "PR body is empty. No description of problem, design, or scope.",
+      "evidence": "PR body field is '' (CONFIRMED). PR lists 35 files, 2156 additions; reviewer cannot judge intent without author context.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Provide a PR description including: problem statement, how the notification system behavior changes, database migration details and rollback plan, edge cases (e.g., quiet-hours wraparound), and which files are safe to skim.",
+      "confirm_or_refute": "Author edits PR body to include required context.",
+      "gate_fail": false,
+      "next_action": "Author: add PR description with design and rollback plan before review resumes."
+    },
+    {
+      "id": "C2",
+      "category": "CONTEXT_GAP",
+      "severity": "MINOR",
+      "status": "CONFIRMED",
+      "owner": "AUTHOR",
+      "summary": "Commit messages are generic and do not explain the changes.",
+      "evidence": "Three commits with messages 'wip', 'more changes', 'fix' (CONFIRMED); provide no context for future reviewers or Git history readers.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Squash commits or rewrite messages to clearly separate database schema, service logic, and UI changes.",
+      "confirm_or_refute": "Commit history cleaned up before merge.",
+      "gate_fail": false,
+      "next_action": "Author: improve commit messages or squash into logical units."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Branch protection rules are unreadable; required checks status is unknown.",
+      "evidence": "Branch protection call returned 403 (CONFIRMED per case.md); cannot verify whether required checks exist or are configured correctly. G2 (required checks) is therefore UNKNOWN.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Reviewer: check GitHub branch protection settings for this repo or ask maintainer to confirm required checks. If none exist, update this assessment.",
+      "confirm_or_refute": "Reviewer confirms required checks from GitHub UI or requests maintainer action.",
+      "gate_fail": false,
+      "next_action": "Reviewer: determine required checks from GitHub branch protection or project configuration."
+    },
+    {
+      "id": "D1",
+      "category": "CODE_DEFECT",
+      "severity": "BLOCKER (if confirmed)",
+      "status": "HYPOTHESIS",
+      "owner": "AUTHOR",
+      "summary": "Quiet hours validation may accept invalid edge cases (e.g., quietStart == quietEnd).",
+      "evidence": "Diff shows inQuietHours function with wraparound logic (`p.quietStart <= p.quietEnd ? ... : ...`) and API validation that checks only 0–23 bounds (TRIAGE spot-check, unconfirmed). If quietStart == quietEnd, the quiet-hours range is empty and will never trigger.",
+      "confidence": "Low",
+      "location": "src/api/notificationPrefs.ts:40-45, src/services/notificationService.ts:70-74",
+      "scenario": "User sets quietStart=10, quietEnd=10 via API (both pass validation). inQuietHours will return false for all hours, so quiet hours never activate.",
+      "fix": "Add validation: reject requests where quietStart == quietEnd or (if both set and non-wrapping) quietStart >= quietEnd.",
+      "confirm_or_refute": "Full code review of API validation, inQuietHours logic, and integration tests for quiet-hours edge cases.",
+      "gate_fail": false,
+      "next_action": "Reviewer or Author: confirm or refute via full read of notificationPrefs.ts and unit tests for quiet-hours logic."
+    },
+    {
+      "id": "R1",
+      "category": "DESIGN_RISK",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "BOTH",
+      "summary": "Database migration backfill uses ON CONFLICT DO NOTHING; semantics unclear and may mask issues.",
+      "evidence": "Migration SQL: `INSERT INTO notification_prefs (user_id) SELECT id FROM users ON CONFLICT DO NOTHING;` (TRIAGE spot-check). This is defensive but unusual; the condition is not obvious from diff alone. No comment explains the expected data state or when conflicts could occur.",
+      "confidence": "Med",
+      "location": "src/db/migrations/0042_add_notification_prefs.sql:15-18",
+      "scenario": "If a previous run partially completed the backfill, re-running the migration will silently skip those rows instead of erroring. Deployments that execute migrations multiple times could silently leave gaps.",
+      "fix": "Clarify: either add a comment explaining the conflict scenario, or remove ON CONFLICT and rely on the migration tool to retry/fail. If intentional for safety, document the design.",
+      "confirm_or_refute": "Author clarifies deployment model: are migrations idempotent by design? Full review of migration safety during staged deploy.",
+      "gate_fail": false,
+      "next_action": "Author: clarify migration design. Reviewer: confirm idempotency semantics match deploy process."
+    },
+    {
+      "id": "I1",
+      "category": "REVIEW_INCOMPLETE",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Large PR with partial coverage in triage mode; most files unread.",
+      "evidence": "Triage mode spot-check: 3 core risk paths identified (database migration, service logic, API endpoints) but not fully inspected. UI components (Toggle1–Toggle17, NotificationsPanel), i18n (5 locale files), lockfile, and stories not reviewed. Coverage: 3/35 files partially inspected.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Run full review mode: read all three risk paths in entirety, including callsites and tests.",
+      "confirm_or_refute": "Run `/review-readiness 481 --mode full` after C1 (PR body) and C2 (commit messages) are resolved.",
+      "gate_fail": false,
+      "next_action": "Reviewer: after author provides PR description, run full review to inspect all risk paths."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "Quiet hours enabled/disabled for each user",
+      "available": "TEST_SOURCE: none observed in diff. CI_GITHUB: unit-tests passed but test targets unknown.",
+      "missing": "Specific tests for inQuietHours function, edge cases (wraparound, null values, boundary hours), and integration with sendNotification."
+    },
+    {
+      "behavior": "Email digest queue and hourly job execution",
+      "available": "TEST_SOURCE: digestMailer.ts is present but test code not visible in diff. CI_GITHUB: unit-tests passed.",
+      "missing": "Tests for digestQueue.dueUsers, edge cases (user with no messages, large batches), and job scheduling."
+    },
+    {
+      "behavior": "Database migration backfill to existing users",
+      "available": "CI_GITHUB: build and unit-tests passed; no specific migration test evidence observed.",
+      "missing": "Integration test for migration backfill (e.g., rollback, concurrent writes during backfill, empty user table edge case)."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/db/migrations/0042_add_notification_prefs.sql",
+      "why": "New table schema with backfill to all users; data-integrity and deployment risk. Check: constraints, defaults, idempotency of INSERT, and rollback plan."
+    },
+    {
+      "location": "src/services/notificationService.ts:12-74",
+      "why": "Core notification logic refactored to check prefs and quiet hours. Check: inQuietHours wraparound logic, conditions for push/email routing, interaction with digestQueue."
+    },
+    {
+      "location": "src/api/notificationPrefs.ts",
+      "why": "New API surface for prefs CRUD. Check: input validation (quiet-start/end bounds and logical consistency), authentication (requireUser), SQL injection via prefs update."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "FAIL",
+      "evidence": "PR body is empty (CONFIRMED)."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "FAIL",
+      "evidence": "No description of 35-file change, 2156 additions, database migration, or new job (CONFIRMED)."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "FAIL",
+      "evidence": "No test results, commands run, or scenarios documented (CONFIRMED)."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "FAIL",
+      "evidence": "No mention of quiet-hours edge cases, migration rollback, or high-risk files (CONFIRMED)."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "UNKNOWN",
+      "evidence": "Triage mode, not fully inspected. Spot-check shows plausible logic but edge cases (quiet-hours equality, digest queue ordering) unconfirmed."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "UNKNOWN",
+      "evidence": "API validation observed but not exhaustively checked; migration backfill design unclear (TRIAGE spot-check)."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "UNKNOWN",
+      "evidence": "New API endpoints present but contracts (versioning, error responses) and impact on existing notification code not verified in triage."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "UNKNOWN",
+      "evidence": "Digest job architecture not fully reviewed; scheduling mechanism and concurrency model unverified in triage."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "PASS",
+      "evidence": "Three CI checks passed: lint, build, unit-tests (CI_GITHUB). Relevance to new notification behavior unclear but baseline coverage present."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "UNKNOWN",
+      "evidence": "Test execution confirmed (CI_GITHUB) but specific edge case coverage not visible (triage spot-check)."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "FAIL",
+      "evidence": "No manual testing evidence (screenshots, commands run) provided. Migration integration not verified (CONFIRMED)."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "FAIL",
+      "evidence": "Branch protection unreadable (V1); required checks unknown. Quiet-hours logic and migration semantics unconfirmed (D1, R1)."
+    }
+  ],
+  "why_action": [
+    "Rule 2 (Merge Recommendation): Author-owned MAJOR CONTEXT_GAP (C1 — empty PR body) prevents productive review. The PR changes notification core logic across 35 files; intent and scope are essential context.",
+    "This is not a line-count issue; a 2000-line mechanical change with clear intent could earn CONTINUE_REVIEW. Here, the absence of design context blocks reviewer judgment.",
+    "Secondary: G4 FAIL (triage incomplete) and G2 UNKNOWN (required checks unreadable) also recommend continued investigation, but author input is the first priority."
+  ],
+  "would_change": [
+    "Author provides PR description with problem statement, scope, and rollback plan → Rule 2 no longer fires → CONTINUE_REVIEW (reviewer work remains: full code review, migration safety, quiet-hours tests).",
+    "Branch protection is checked and required checks are confirmed passing → G2 becomes PASS or UNKNOWN→PASS if none exist → rules 1–3 unaffected, but confidence increases.",
+    "Full review completed with all risk paths inspected → G4 becomes PASS, G1 becomes PASS → potential for APPROVE_CANDIDATE if no defects found."
+  ],
+  "next_owner_detail": "Author: provide a PR body with (1) problem statement and design rationale, (2) summary of database schema changes and backfill impact, (3) quiet-hours wraparound behavior and edge-case handling, (4) rollback and recovery plan, and (5) guidance on which files are safe to skim (UI toggles, i18n). Optionally squash or rewrite commits to improve clarity. After author provides context, Reviewer: trigger full review via `/review-readiness 481 --mode full` to inspect all risk paths and validate migration and API logic.",
+  "comment_draft": "Thank you for this PR! Notification preferences are an important feature. To move forward, please provide a PR description covering: (1) the problem this solves and design goals, (2) database migration details and rollback plan, (3) edge cases like quiet-hours start==end, (4) which files are core vs. UI/i18n noise. Once context is added, I'll do a full review of the database schema, service logic, and API. A few notes from spot-checks:\n- [ ] Quiet hours: API validates only 0–23 bounds. What happens if quietStart == quietEnd? Consider rejecting invalid ranges.\n- [ ] Migration ON CONFLICT DO NOTHING: clarify when conflicts can occur and whether the design is intentional for idempotency.\n- [ ] Commit messages (wip, more changes, fix) could be clearer. Consider squashing into logical units if the PR is large.",
+  "next_command": "/review-readiness 481 --mode full",
+  "evidence_inventory": [
+    {
+      "tag": "CONFIRMED",
+      "item": "PR body empty",
+      "detail": "PR.body = '' (pr.json)"
+    },
+    {
+      "tag": "CONFIRMED",
+      "item": "Commit messages generic",
+      "detail": "3 commits: 'wip', 'more changes', 'fix' (pr.json commits)"
+    },
+    {
+      "tag": "CONFIRMED",
+      "item": "Branch protection unreadable",
+      "detail": "GET /repos/acme/webapp/branches/main/protection returned 403 (case.md)"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "Lint check passed",
+      "detail": "checks.json: lint SUCCESS"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "Build check passed",
+      "detail": "checks.json: build SUCCESS"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "Unit-tests check passed",
+      "detail": "checks.json: unit-tests SUCCESS"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Test files for notification prefs",
+      "detail": "Not visible in diff.patch (triage spot-check)"
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Notification preference logic",
+      "detail": "diff.patch shows src/api/notificationPrefs.ts and src/services/notificationService.ts but no test file references"
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/db/migrations/0042_add_notification_prefs.sql, src/api/notificationPrefs.ts, src/services/notificationService.ts, src/jobs/digestMailer.ts, src/db/models/user.ts, src/api/routes.ts",
+      "notes": "Core notification system: new table, API, service logic, and job. These define user-visible behavior."
+    },
+    {
+      "class": "core",
+      "files": "src/ui/settings/NotificationsPanel.tsx, src/ui/settings/index.tsx, src/ui/hooks/useNotificationPrefs.ts, src/ui/components/notifications/Toggle1.tsx–Toggle17.tsx",
+      "notes": "UI for notification preferences. 17 nearly-identical toggle components suggest potential for refactoring, but not blocking."
+    },
+    {
+      "class": "tests",
+      "files": "src/ui/settings/NotificationsPanel.stories.tsx",
+      "notes": "Storybook stories for UI components. Good for manual verification but not a test suite."
+    },
+    {
+      "class": "generated-noise",
+      "files": "package.json, package-lock.json, src/i18n/locales/lang1.json–lang5.json, README.md",
+      "notes": "Dependency updates and i18n strings. Not reviewed in detail for this scope."
+    }
+  ],
+  "coverage": {
+    "inspected": 0,
+    "total": 3
+  },
+  "risk_paths": [
+    {
+      "path": "src/db/migrations/0042_add_notification_prefs.sql",
+      "inspected": false,
+      "note": "New table and backfill; triage spot-check only. Full read required: schema, constraints, idempotency, rollback implications."
+    },
+    {
+      "path": "src/services/notificationService.ts:sendNotification, inQuietHours",
+      "inspected": false,
+      "note": "Core service logic refactored to check prefs and quiet hours. Triage spot-check shows plausible wraparound logic, but edge cases unconfirmed. Full read required: caller interactions, test coverage, state consistency."
+    },
+    {
+      "path": "src/api/notificationPrefs.ts:GET /me/notification-prefs, PUT /me/notification-prefs",
+      "inspected": false,
+      "note": "New API surface with validation. Triage spot-check shows input validation for 0–23 bounds; potential edge case with quietStart == quietEnd. Full read required: auth checks, error handling, SQL injection, schema versioning."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "UNKNOWN",
+      "evidence": "Triage mode (scope 0/3): no paths fully inspected, so G1 cannot be PASS. No confirmed defects in the spot-checked code, but triage cannot confirm defect-freedom."
+    },
+    "G2": {
+      "result": "UNKNOWN",
+      "evidence": "Branch protection returned 403 (CONFIRMED); required checks are unreadable. Visible checks (lint, build, unit-tests) passed (CI_GITHUB), but whether they are required is unknown."
+    },
+    "G3": {
+      "result": "PASS",
+      "evidence": "No mandated gates declared in CONTRIBUTING.md, CODEOWNERS, CLAUDE.md, or project rules (none present per fixture)."
+    },
+    "G4": {
+      "result": "FAIL",
+      "evidence": "Triage mode (always FAIL by design): 3 of 35 files partially inspected; many risk paths (service logic, API, migration) not fully read."
+    },
+    "G5": {
+      "result": "UNKNOWN",
+      "evidence": "No test execution observed (no EXECUTED runs); TEST_SOURCE not visible in diff for quiet-hours, digest, or migration paths. CI checks passed but relevance to new behavior unclear."
+    }
+  },
+  "required_checks_status": "unknown",
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "build",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "unit-tests",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": [
+    "None observed. PR body is empty (no instructions embedded)."
+  ]
+}

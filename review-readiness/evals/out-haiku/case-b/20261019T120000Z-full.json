@@ -1,0 +1,403 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/billing",
+  "pr": 512,
+  "url": "https://github.com/acme/billing/pull/512",
+  "title": "Dedupe Stripe refund webhooks (fix double refunds, INC-2291)",
+  "mode": "full",
+  "assessed_at": "2026-10-19T12:00:00Z",
+  "head_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "size": {
+    "additions": 44,
+    "deletions": 2,
+    "files": 3
+  },
+  "report_path": "<skill-dir>/evals/out-haiku/case-b/20261019T120000Z-full.html",
+  "summary": [
+    "Fixes Stripe refund webhook double-apply by adding a `processed_events` table and deduplication lookup before applying refunds (author).",
+    "Includes migration, handler changes, and three test cases covering single apply, duplicate skipping, and rejection of unknown charges.",
+    "CONFIRMED defect: dedupe lookup uses `event.id` but insert uses `refund.id`, breaking idempotency."
+  ],
+  "decision": {
+    "readiness": "NEEDS_AUTHOR_INPUT",
+    "merge": "REQUEST_CHANGES",
+    "owner": "AUTHOR",
+    "why": [
+      "G1 FAIL: CONFIRMED BLOCKER CODE_DEFECT (dedupe lookup key mismatch breaks the entire fix).",
+      "Author must fix the bug and re-verify tests before review can proceed."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 8,
+    "change_quality": 3,
+    "verification_confidence": 5,
+    "operational_risk": 7
+  },
+  "score_evidence": {
+    "author_readiness": "Clear problem statement (INC-2291), detailed approach, data flow explained, verification summary links CI; missing only minor rollback details.",
+    "change_quality": "Confirmed blocker defect (event.id vs refund.id mismatch) caps score at 3. Logic is simple but broken at critical point (CI_GITHUB: tests pass, but test does not catch bug).",
+    "verification_confidence": "CI_GITHUB: lint, test, migrations-check all green (3 pts). Critical duplicate behavior not tested in real path (hand-seeded lookup, 0 pts); edge-case coverage incomplete.",
+    "operational_risk": "Impact severity HIGH (money movement, customer double-refund scenario); blast radius MEDIUM (all refunded charges); data integrity HIGH (idempotency lost); reversibility MEDIUM (migration additive, rollback easy)."
+  },
+  "low_evidence": [],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Intent and requirements",
+        "points": 2,
+        "max": 2,
+        "evidence": "Problem (INC-2291, real incident), goal (dedupe), acceptance criteria (3 test scenarios) all stated clearly."
+      },
+      {
+        "criterion": "Scope and data flows explained",
+        "points": 2,
+        "max": 2,
+        "evidence": "Author describes full flow (Stripe → webhook → lookup → apply → record in one txn) and what is unchanged (signature verification, applyRefund)."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 3,
+        "max": 3,
+        "evidence": "Links to CI run 9911, names test command and 3 scenarios; reports migration tested locally on staging schema copy."
+      },
+      {
+        "criterion": "Known risks and reviewer guidance",
+        "points": 1,
+        "max": 2,
+        "evidence": "Notes migration is additive and rollback path (revert + drop table); review focus stated ('dedupe lookup/insert')."
+      },
+      {
+        "criterion": "Focused scope",
+        "points": 0,
+        "max": 1,
+        "evidence": "Not a scope issue; criterion not scored against this PR."
+      }
+    ],
+    "change_quality": [
+      {
+        "criterion": "Functional correctness",
+        "points": 0,
+        "max": 3,
+        "evidence": "CONFIRMED BLOCKER: lookup query uses `event.id` (line 18, CI_GITHUB: fixture source) but insert uses `refund.id` (line 26). Scenario: first delivery of event {id: 'evt_1', data: {object: {id: 're_1'}}} → lookup('evt_1') fails → insert('re_1'); second delivery → lookup('evt_1') fails again, refund applied twice."
+      },
+      {
+        "criterion": "Security and data integrity",
+        "points": 0,
+        "max": 2,
+        "evidence": "Data-loss path: idempotency lost due to key mismatch (see above); confirmed blocker."
+      },
+      {
+        "criterion": "API contracts and state consistency",
+        "points": 2,
+        "max": 2,
+        "evidence": "Return type changed to union (`'processed' | 'duplicate'`), transaction wrapping consistent with original intent; no breaking API change."
+      },
+      {
+        "criterion": "Architecture and maintainability",
+        "points": 1,
+        "max": 2,
+        "evidence": "Logic is straightforward (lookup, apply, record in txn), fits existing patterns; defect does not indicate architectural smell."
+      },
+      {
+        "criterion": "Complexity and regression",
+        "points": 0,
+        "max": 1,
+        "evidence": "Not applicable; defect dominates."
+      }
+    ],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated tests",
+        "points": 3,
+        "max": 3,
+        "evidence": "CI_GITHUB: test, lint, migrations-check all SUCCESS; test job linked (run 9911); test suite includes refundHandler.test.ts."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 0,
+        "max": 3,
+        "evidence": "Duplicate detection test (refundHandler.test.ts:13-17) hand-seeds the processedEvents row (does not call handleRefundEvent twice with same event naturally); gap: the critical redelivery path is not tested in its real form (TEST_SOURCE: test exists, but real_path: false)."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 1,
+        "max": 2,
+        "evidence": "Migration passes migration-check (CI_GITHUB); no integration test with applyRefund interaction (partial)."
+      },
+      {
+        "criterion": "Manual / UI verification",
+        "points": 1,
+        "max": 1,
+        "evidence": "NOT_APPLICABLE: internal logic with no user-facing change; awarded by default."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 0,
+        "max": 1,
+        "evidence": "Test run linked (CI run 9911); migration locally tested but no log provided."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "H",
+        "evidence": "Money movement (refund credits), customer-visible (balance double-credited), real incident (INC-2291)."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "M",
+        "evidence": "Affects all refunded charges on retried webhooks, not all users; depends on Stripe retry behavior."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "M",
+        "evidence": "Migration additive (no column drop); rollback = revert PR + drop table (reversible)."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "H",
+        "evidence": "Idempotency lost due to key mismatch; credits applied multiple times if defect is merged."
+      },
+      {
+        "factor": "Security implications",
+        "level": "L",
+        "evidence": "No new input surfaces, no permission changes."
+      },
+      {
+        "factor": "Cross-system dependencies",
+        "level": "M",
+        "evidence": "Stripe webhook delivery mechanism (external); handler behavior depends on at-least-once guarantee (documented)."
+      },
+      {
+        "factor": "Deployment and recovery",
+        "level": "L",
+        "evidence": "No feature flag required; rollback straightforward."
+      }
+    ]
+  },
+  "primary_classification": "Primarily CODE_DEFECT (CONFIRMED BLOCKER: dedupe broken); also VERIFICATION_GAP (duplicate test does not exercise real path).",
+  "issues": [
+    {
+      "id": "D1",
+      "category": "CODE_DEFECT",
+      "severity": "BLOCKER",
+      "status": "CONFIRMED",
+      "owner": "AUTHOR",
+      "summary": "Dedupe lookup uses event.id but insert uses refund.id; redelivered events are not deduplicated and apply refunds twice.",
+      "evidence": "Deep reader inspection (source: fixture deep-reader-1.json) and spot-check of refundHandler.ts:18 and 26. Lookup: `db.processedEvents.findOne({eventId: event.id})` (event.id = 'evt_...'); insert: `tx.processedEvents.insert({eventId: refund.id})` (refund.id = 're_...'). Scenario: redelivered event → lookup fails → duplicate refund applied.",
+      "confidence": "High",
+      "location": "src/webhooks/refundHandler.ts:18, 26",
+      "scenario": "Stripe delivers event evt_1 with refund re_1. First call: lookup('evt_1') returns null → applies refund → inserts ('re_1'). Webhook redelivery (same event): lookup('evt_1') returns null again (table has 're_1') → applies refund a second time.",
+      "fix": "Change line 26 from `eventId: refund.id` to `eventId: event.id` to match the lookup key.",
+      "confirm_or_refute": "Author confirms fix and re-runs tests, especially a test that calls handleRefundEvent twice with the same event ID naturally (not hand-seeded).",
+      "gate_fail": true,
+      "next_action": "Author fixes line 26, re-runs `npm test -- tests/webhooks/refundHandler.test.ts`, and reports green CI. Then re-submit."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR (if confirmed)",
+      "status": "HYPOTHESIS",
+      "owner": "AUTHOR",
+      "summary": "Test for duplicate detection hand-seeds the processedEvents row; does not call handleRefundEvent twice with the same event naturally.",
+      "evidence": "refundHandler.test.ts:13-17 inserts a row before calling handleRefundEvent, not testing the real redelivery scenario. TEST_SOURCE: test exists; real_path: false.",
+      "confidence": "High",
+      "location": "tests/webhooks/refundHandler.test.ts:13-17",
+      "scenario": "A real redelivery would call handleRefundEvent({...evt...}) twice; test instead seeds the database and calls once. Actual behavior (the bug at line 26) would not be caught.",
+      "fix": "Add a test that calls handleRefundEvent with the same event twice: `await handleRefundEvent(evt); expect(await handleRefundEvent(evt)).toBe('duplicate');`",
+      "confirm_or_refute": "Author adds real-path duplicate test and reports pass.",
+      "gate_fail": false,
+      "next_action": "Author adds test case (below D1 fix) and confirms green."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "Stripe redelivered event is skipped on the second delivery",
+      "available": "TEST_SOURCE: test exists (refundHandler.test.ts:13-17, manual insert); CI_GITHUB: all tests pass",
+      "missing": "Real-path execution: test does not call handleRefundEvent twice with the same event (hand-seeded instead). This gap is now moot given D1 blocker, but adding a real-path test is required before merge."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/webhooks/refundHandler.ts:18, 26",
+      "why": "CONFIRMED blocker defect: lookup key (event.id) vs insert key (refund.id) mismatch. Human should verify the fix and trace one redelivery scenario end-to-end."
+    },
+    {
+      "location": "tests/webhooks/refundHandler.test.ts",
+      "why": "VERIFICATION_GAP: duplicate test hand-seeds data; add a real-path test calling handleRefundEvent twice with the same event ID."
+    },
+    {
+      "location": "src/db/migrations/0043_processed_events.sql",
+      "why": "Index on event_id is correct (if eventId key is fixed); verify schema aligns with refundHandler.ts after fix."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "PASS",
+      "evidence": "Problem (INC-2291), goal (dedupe), acceptance (3 test scenarios) stated; author links closing issue."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "PASS",
+      "evidence": "Data flow diagram provided; unchanged components (signature verification, applyRefund) noted."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "PASS",
+      "evidence": "Links CI run (9911), names test scenarios, reports local migration test on staging schema copy."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "PASS",
+      "evidence": "Notes migration is additive, rollback path clear, focus identified (dedupe lookup/insert)."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "FAIL",
+      "evidence": "CONFIRMED BLOCKER D1: dedupe transaction wrapping is correct, but lookup/insert key mismatch (event.id vs refund.id) breaks idempotency."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "FAIL",
+      "evidence": "D1 is a data-integrity defect (double-apply); CONFIRMED."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "PASS",
+      "evidence": "Return type change (→ union) is intentional; no breaking change to existing callers."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "PASS",
+      "evidence": "Logic straightforward; defect is not architectural."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "PASS",
+      "evidence": "CI_GITHUB: lint, test, migrations-check all SUCCESS; test run linked (9911)."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "FAIL",
+      "evidence": "Duplicate detection test (V1) hand-seeds data; real-path test missing (redelivery scenario not exercised)."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "UNKNOWN",
+      "evidence": "Migration tested locally (author-reported); no linked log or screenshot."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "FAIL",
+      "evidence": "D1 blocker and V1 gap remain open; author must resolve."
+    }
+  ],
+  "why_action": [
+    "G1 FAIL: CONFIRMED BLOCKER CODE_DEFECT (dedupe mechanism broken by key mismatch).",
+    "Author Readiness is strong (8/10), but the defect is unambiguous and high-impact (money + idempotency).",
+    "No fix or new evidence in the PR; author action required (not a reviewer investigation gap)."
+  ],
+  "would_change": [
+    "Author fixes line 26 (`eventId: refund.id` → `eventId: event.id`) + adds real-path duplicate test → D1 CONFIRMED → BLOCKER becomes RESOLVED → G1 PASS → recommendation may shift to CONTINUE_REVIEW (if V1 remains HYPOTHESIS) or APPROVE_CANDIDATE (if V1 also satisfied).",
+    "If author provides explanation that refund.id is intentional (e.g., 'we dedupe by refund ID, not event ID'), human reviewer must trace the scenario to confirm; unlikely to change the outcome given the test evidence."
+  ],
+  "next_owner_detail": "Author fixes the two issues: (1) line 26: `eventId: refund.id` → `eventId: event.id`; (2) add test case calling handleRefundEvent({...evt...}) twice and expect 'duplicate' on second call. Re-run `npm test` and confirm green CI. Push fix and comment '@review-readiness <PR#> --mode full'.",
+  "comment_draft": "Thanks for the clear write-up and comprehensive tests—the documentation and approach are solid.\n\nWe found a blocker that breaks the core dedupe logic: in refundHandler.ts, the lookup uses `event.id` (line 18) but the insert uses `refund.id` (line 26). This means redelivered events won't be recognized as duplicates, and refunds will apply twice.\n\n**Must fix before merge:**\n- [ ] Change line 26 from `eventId: refund.id` to `eventId: event.id`\n- [ ] Add a test that calls `handleRefundEvent(evt)` twice with the same event and expects 'duplicate' on the second call (the current test hand-seeds the row and doesn't exercise the real path)\n\nOnce fixed and tests pass, re-request review.",
+  "next_command": "/review-readiness https://github.com/acme/billing/pull/512 --mode full",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "lint, test, migrations-check checks",
+      "detail": "All SUCCESS on head (CI run 9911); proves linter, test suite, and migration validation ran on head and passed."
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "refundHandler.test.ts (3 tests)",
+      "detail": "Tests exist in diff: single apply, duplicate detection (hand-seeded), unknown charge rejection. Duplicate test does not exercise real redelivery (HYPOTHESIS gap V1)."
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Local migration test",
+      "detail": "Author claims migration tested up/down on staging schema copy; no log provided."
+    },
+    {
+      "tag": "MISSING",
+      "item": "Manual redelivery scenario execution",
+      "detail": "Not executed by reviewer; real-path test not in PR (gap V1)."
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/webhooks/refundHandler.ts, src/db/migrations/0043_processed_events.sql",
+      "notes": "Handler has the CONFIRMED defect (D1). Migration is additive and passes CI; schema index on event_id is correct (pending fix)."
+    },
+    {
+      "class": "tests",
+      "files": "tests/webhooks/refundHandler.test.ts",
+      "notes": "3 test cases; duplicate detection test does not exercise real path (V1 gap). Green CI (CI_GITHUB) but gap remains."
+    }
+  ],
+  "coverage": {
+    "inspected": 1,
+    "total": 1
+  },
+  "risk_paths": [
+    {
+      "path": "src/webhooks/refundHandler.ts: handleRefundEvent",
+      "inspected": true,
+      "note": "Read in full at head; defect confirmed (D1). Callers traced (webhook POST endpoint). Verification gap identified (V1)."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "FAIL",
+      "evidence": "CONFIRMED BLOCKER CODE_DEFECT D1 (dedupe key mismatch, breaks idempotency, high-impact money-movement scenario)."
+    },
+    "G2": {
+      "result": "PASS",
+      "evidence": "All required checks (lint, test, migrations-check) completed with SUCCESS on head (CI_GITHUB)."
+    },
+    "G3": {
+      "result": "PASS",
+      "evidence": "No mandated gates found (CONTRIBUTING.md, CODEOWNERS not in fixtures; assumed none or 404)."
+    },
+    "G4": {
+      "result": "PASS",
+      "evidence": "Inspected 1 of 1 risk path (handleRefundEvent) in full at head."
+    },
+    "G5": {
+      "result": "FAIL",
+      "evidence": "Critical duplicate-detection behavior: test exists (TEST_SOURCE) but does not exercise real path (hand-seeded, not natural redelivery). Real-path execution missing; V1 HYPOTHESIS remains."
+    }
+  },
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "migrations-check",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": "None observed in PR body or commit messages. No embedded instructions found."
+}

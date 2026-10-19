@@ -74,19 +74,19 @@ You can also just ask, e.g. "is PR 512 ready for review?". The skill auto-trigge
   - `latest.json`: overwritten with a copy of the JSON; it is the state that `recheck` reads.
 - The HTML is produced by `scripts/render_report.py` (Python 3, standard library only). It HTML-escapes all text, because reports quote untrusted PR content.
 
-## Cost and model routing
+## Cost and model
 
-The expensive part is the **main session's context**: everything read into it is re-sent on every later turn. The skill therefore splits the work:
+- **The model.** `SKILL.md` sets `model: haiku`, so the skill runs on your session's **haiku slot**, which should be the cheapest capable model. Through a proxy, that slot can be any cheap model.
+- **Changing it.** To use another model, change `model:` in the frontmatter to `sonnet`, `opus` or `inherit` (inherit = the model of your current session).
+- **No subagents.** Everything runs inline. On a cheap model, delegating to subagents only added latency; an earlier version tried it and saved ~15% of main-model tokens while running slower.
+- **What drives cost.** The main lever is the number of turns × the context size, because a proxy may not apply prompt caching. The skill batches independent calls and reads per-file patches instead of the whole diff.
+- **Quality guardrails.** A cheaper model drifts on details, so `scripts/render_report.py` enforces the policy mechanically:
+  - triage cannot confirm defects or claim coverage
+  - gate results must be consistent
+  - BLOCKER is reserved for real defects and gate FAILs
+  - the timestamp must be real
 
-| Role | Default slot | Reads |
-|---|---|---|
-| collector | `haiku` | metadata, the per-file diff, CI workflows and logs, project rules; returns a compact JSON evidence pack |
-| deep_reader (full mode) | `haiku`, one per risk path, run in parallel | the full functions plus callers; returns draft findings |
-| main | the session's model | only the evidence pack and the readers' JSON; re-reads ≤ 40 cited lines before confirming a defect |
-| renderer | none (a Python script) | the report JSON |
-
-- **Slots are not model names.** If you route Claude Code through a proxy (e.g. the `sonnet` slot is mapped to a different provider's model), edit the **Model routing** table at the top of `SKILL.md` so that the subagent roles use your cheapest capable slot.
-- **Never route a subagent role to the same expensive slot as the main session.** Doing so adds cost instead of saving it.
+  In blind evals on the A–F fixtures, a haiku-class main model reached the correct decision in all 6 cases, including finding the planted bug in full mode. See `evals/results.md`.
 
 ## Safety model
 - **Read-only.** It never comments, approves, requests changes, merges, pushes, commits, checks out or edits.
@@ -117,8 +117,8 @@ SKILL.md                     workflow, modes, hard rules (loaded on invocation)
 references/scoring-rubric.md the 4 dimensions, sub-criteria, evidence-source tags
 references/decision-policy.md issue taxonomy, hard gates, decision rules, owners
 references/report-schema.md   report JSON schema (v2), field rules, terminal summary format
-references/collector-prompt.md  prompt + output schema for the evidence-collector subagent
-references/deep-read-prompt.md  prompt + output schema for the full-mode deep-reader subagents
+references/evidence-checklist.md  Step 1: what to fetch, read-only commands, gate semantics
+references/deep-read-checklist.md Step 3 (full): how to read a risk path and when a defect is CONFIRMED
 scripts/render_report.py     validates the JSON and renders the self-contained HTML (stdlib only)
 evals/fixtures/case-{a..f}/  synthetic PRs for the 6 acceptance scenarios
 evals/expected.md            expected outcomes + fixture-mode substitution rules

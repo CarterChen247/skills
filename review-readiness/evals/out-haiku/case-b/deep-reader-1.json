@@ -1,0 +1,44 @@
+{
+  "path": "src/webhooks/refundHandler.ts: handleRefundEvent",
+  "inspected_fully": true,
+  "read": [
+    "src/webhooks/refundHandler.ts:5-30",
+    "src/billing/refunds.ts:4-9"
+  ],
+  "callers_traced": [
+    "POST /webhooks/stripe (caller, from PR description)"
+  ],
+  "findings": [
+    {
+      "kind": "defect",
+      "summary": "Dedupe lookup key (event.id) does not match insert key (refund.id), breaking idempotency",
+      "location": "src/webhooks/refundHandler.ts:18 and 26",
+      "scenario": "Stripe delivers event {id: 'evt_1', data: {object: {id: 're_1', ...}}}. First call: lookup('evt_1') fails, applies refund, inserts 're_1'. Second delivery of same event: lookup('evt_1') fails again because table has 're_1', not 'evt_1'. Refund applied twice, customer double-credited.",
+      "excerpt": "Line 18: const seen = await db.processedEvents.findOne({ eventId: event.id });\n...\nLine 26: await tx.processedEvents.insert({ eventId: refund.id, processedAt: new Date() });",
+      "depends_on_unobserved": "",
+      "confidence": "High"
+    }
+  ],
+  "tests_mapping": [
+    {
+      "behavior": "Duplicate events are skipped and return 'duplicate'",
+      "test": "tests/webhooks/refundHandler.test.ts:13-17",
+      "real_path": false,
+      "ci_job": "test"
+    },
+    {
+      "behavior": "First event is processed and returns 'processed'",
+      "test": "tests/webhooks/refundHandler.test.ts:8-11",
+      "real_path": true,
+      "ci_job": "test"
+    },
+    {
+      "behavior": "Unknown charge is rejected",
+      "test": "tests/webhooks/refundHandler.test.ts:19-21",
+      "real_path": true,
+      "ci_job": "test"
+    }
+  ],
+  "not_inspected": [],
+  "untrusted_instructions": []
+}

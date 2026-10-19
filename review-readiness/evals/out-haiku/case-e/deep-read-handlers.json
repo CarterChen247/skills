@@ -1,0 +1,73 @@
+{
+  "path": "src/orders/events/handlers/handler01.ts, handler02.ts",
+  "inspected_fully": false,
+  "read": [
+    "src/orders/events/handlers/handler01.ts:1-6",
+    "src/orders/events/handlers/handler02.ts:1-7",
+    "tests/orders/events/handler01.test.ts:1-7"
+  ],
+  "callers_traced": [],
+  "findings": [
+    {
+      "kind": "risk",
+      "summary": "handler02 assumes prior state exists without null check",
+      "location": "src/orders/events/handlers/handler02.ts:4",
+      "scenario": "If onOrderPaid is called as the first event (state is undefined), function will fail with TypeError when accessing state.status",
+      "excerpt": "export function onOrderPaid(state: OrderProjection, e: OrderEvent<\"OrderPaid\">): OrderProjection {\n  if (state.status !== \"placed\") return state;",
+      "depends_on_unobserved": "Whether callers ensure correct event sequence; whether migration backfill properly initializes order_events",
+      "confidence": "High"
+    },
+    {
+      "kind": "gap",
+      "summary": "Only handler01 and handler02 visible; cannot assess 20 other handlers",
+      "location": "src/orders/events/handlers/handler03.ts through handler22.ts",
+      "scenario": "Other handlers may have similar state management issues, idempotency problems, or missing validation",
+      "excerpt": "",
+      "depends_on_unobserved": "Full diff access; analysis of all 22 handlers",
+      "confidence": "Med"
+    },
+    {
+      "kind": "gap",
+      "summary": "Cannot verify test coverage for all handlers",
+      "location": "tests/orders/events/handler*.test.ts",
+      "scenario": "18 test files exist for 22 handlers; 4 handlers may lack tests",
+      "excerpt": "",
+      "depends_on_unobserved": "Full list of test files in PR; mapping of which tests cover which handlers",
+      "confidence": "Med"
+    },
+    {
+      "kind": "risk",
+      "summary": "Version increment logic in both handlers uses simple addition",
+      "location": "src/orders/events/handlers/handler01.ts:5, handler02.ts:6",
+      "scenario": "If two events are applied out-of-order or twice, version field will be inconsistent with event log",
+      "excerpt": "version: (state?.version ?? 0) + 1\n...\nversion: state.version + 1",
+      "depends_on_unobserved": "Whether event store guarantees ordering; whether replay handles duplicates",
+      "confidence": "Med"
+    }
+  ],
+  "tests_mapping": [
+    {
+      "behavior": "onOrderPlaced creates initial projection with placed status",
+      "test": "tests/orders/events/handler01.test.ts:2-6",
+      "real_path": true,
+      "ci_job": "test (SUCCESS per checks)"
+    },
+    {
+      "behavior": "onOrderPlaced sets version to 1 for undefined state",
+      "test": "tests/orders/events/handler01.test.ts:5",
+      "real_path": true,
+      "ci_job": "test (SUCCESS per checks)"
+    }
+  ],
+  "not_inspected": [
+    "src/orders/eventStore.ts (not retrievable)",
+    "src/orders/events/handlers/handler03.ts through handler22.ts (not retrievable)",
+    "src/orders/projections/proj*.ts (not retrievable)",
+    "src/orders/orderService.ts (not retrievable)",
+    "src/db/migrations/* (not retrievable)",
+    "Type definitions for OrderEvent, OrderProjection (not in head/ fixtures)",
+    "Callers of these handlers (not retrievable)",
+    "Test implementations for handler02+ (not retrievable)"
+  ],
+  "untrusted_instructions": []
+}

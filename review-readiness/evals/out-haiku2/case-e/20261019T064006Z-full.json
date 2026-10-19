@@ -1,0 +1,457 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/shop",
+  "pr": 890,
+  "url": "https://github.com/acme/shop/pull/890",
+  "title": "Event-sourced order pipeline",
+  "mode": "full",
+  "assessed_at": "2026-10-19T06:40:06Z",
+  "head_sha": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+  "size": {
+    "additions": 25389,
+    "deletions": 1520,
+    "files": 56
+  },
+  "report_path": "<skill-dir>/evals/out-haiku2/case-e/20261019T064006Z-full.html",
+  "summary": [
+    "Refactors order processing from imperative to event-sourced model. Orders now derived from `order_events` table; projection replaces direct `orders.status` column (AUTHOR).",
+    "Large PR: 25K additions across 56 files, including 22 event handlers, 8 projections, schema migrations (add table, backfill, drop column), and generated protobuf.",
+    "Diff unavailable (HTTP 406, exceeds 20K lines). Only 3 of 56 files retrievable at head; full code review blocked without local clone or smaller PR."
+  ],
+  "decision": {
+    "readiness": "READY_FOR_REVIEW",
+    "merge": "CONTINUE_REVIEW",
+    "owner": "REVIEWER",
+    "why": [
+      "Rule 3 applies: G4 FAIL (uninspected risk paths in full mode) and MAJOR REVIEW_INCOMPLETE issues prevent APPROVE_CANDIDATE.",
+      "Change Quality NOT_ASSESSED due to inaccessible diff; author claims and CI green do not override missing evidence.",
+      "Reviewer must obtain local clone, split PR, or confirm test coverage via CI logs before proceeding."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 5,
+    "change_quality": "NOT_ASSESSED",
+    "verification_confidence": 3,
+    "operational_risk": 9
+  },
+  "score_evidence": {
+    "author_readiness": "Intent clear + scope outlined + claims verification (1pt, unverified claim); no risk notes. 5/10.",
+    "change_quality": "NOT_ASSESSED: diff unretrievable (HTTP 406, 20K+ lines); only 3 of 56 files readable at head. Coverage 3/56.",
+    "verification_confidence": "CI green (test, lint, build: CI_GITHUB, 2pts); no test targets verifiable (0pts); critical path coverage unknown (0pts). 3/10 (low evidence).",
+    "operational_risk": "Schema migration (drop column: 2), all orders affected (2), irreversible (2), data writes (2), cross-service contracts (1), coordinated deploy (1). Sum 10 → 10/10."
+  },
+  "low_evidence": [
+    "verification_confidence"
+  ],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Intent and requirements",
+        "points": 2,
+        "max": 2,
+        "evidence": "Clear intent: 'refactors order pipeline to event-sourced model' with design doc link (AUTHOR_REPORTED). Requirements stated: orders derived from events, status dropped."
+      },
+      {
+        "criterion": "Scope and data flows",
+        "points": 1,
+        "max": 2,
+        "evidence": "Main change explained (orders → projections) but full data flow and affected areas not detailed. No mention of projection consistency or handler coordination."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 1,
+        "max": 3,
+        "evidence": "Author claims 'Unit tests added for every handler' (AUTHOR_REPORTED, unverified). No commands, links, or results provided. Claim vs metadata mismatch: 18 test files visible, 22 handlers mentioned."
+      },
+      {
+        "criterion": "Risks and reviewer guidance",
+        "points": 0,
+        "max": 2,
+        "evidence": "No mention of known risks, rollback strategy, or migration hazards. No explicit review focus guidance."
+      },
+      {
+        "criterion": "Scope focus",
+        "points": 1,
+        "max": 1,
+        "evidence": "Single concern: event sourcing refactor. Logically split into commits (event store, handlers, projections, migrations, tests, protos)."
+      }
+    ],
+    "change_quality": [],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated tests",
+        "points": 2,
+        "max": 3,
+        "evidence": "CI checks green (test, lint, build: CI_GITHUB). Relevance unclear: cannot see which suites or handlers each job covers. Marked 'relevance unclear' (2pts)."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 0,
+        "max": 3,
+        "evidence": "No test targets verifiable. Handler01 test exists (EXECUTED observation: minimal, only checks projection creation and version bump). 21 other handlers' tests unreadable. 0pts."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 0,
+        "max": 2,
+        "evidence": "No integration or contract test evidence available. Migrations (backfill, drop column) are high-risk; no test of backward compatibility or data loss prevention visible. 0pts."
+      },
+      {
+        "criterion": "Manual or UI verification",
+        "points": 1,
+        "max": 1,
+        "evidence": "NOT_APPLICABLE: internal event processing, no UI or ops change. Award 1."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 0,
+        "max": 1,
+        "evidence": "Author claim ('unit tests added for every handler') is unlinked and unverifiable against CI logs. 0pts."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "H",
+        "evidence": "Data-critical: refactors core order state model; schema migration affects all orders."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "H",
+        "evidence": "All users/tenants. Order processing is shared core path."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "H",
+        "evidence": "Irreversible: migration 0052 drops orders.status column. No rollback path if projection logic is wrong."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "H",
+        "evidence": "Migrations: add table (0050), backfill (0051), drop column (0052). No idempotency or rollback documented. Double-apply or incomplete backfill risk."
+      },
+      {
+        "factor": "Cross-system dependencies",
+        "level": "M",
+        "evidence": "API changes (api.ts: 95 add, 70 del). Callers expecting orders.status may break."
+      },
+      {
+        "factor": "Deployment",
+        "level": "M",
+        "evidence": "Three sequential migrations require coordination. No feature flag or staged rollout visible."
+      }
+    ]
+  },
+  "primary_classification": "REVIEW_INCOMPLETE dominates: diff unavailable, only 3/56 files readable. Secondary: VERIFICATION_GAP (test coverage unverifiable) and potential CONTEXT_GAP (test claim vs metadata).",
+  "issues": [
+    {
+      "id": "I1",
+      "category": "REVIEW_INCOMPLETE",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Diff exceeds GitHub's 20K-line limit (HTTP 406); full code review impossible without local access.",
+      "evidence": "EXECUTED: `gh pr diff` returned error: 'diff exceeded the maximum number of lines (20000)'. Per SKILL.md §1, diff unavailability makes Change Quality NOT_ASSESSED. Only 3 of 56 files readable at head (handler01.ts, handler02.ts, handler01.test.ts). This is the root cause of G4 FAIL (uninspected risk paths).",
+      "confidence": "High",
+      "location": "acme/shop#890 diff",
+      "scenario": "Reviewer attempts to read unified diff → HTTP 406 error. Only per-file patches for 3 files available in fixture; remaining 53 files opaque.",
+      "fix": "Obtain local clone (`git clone ... && git checkout <branch>`) and review locally, OR author splits PR into smaller reviewable chunks (e.g., by layer: handlers, projections, migrations).",
+      "gate_fail": false,
+      "next_action": "Request local clone access or ask author to split PR into max 3 parts; then re-run `--mode full`."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Test coverage for 22 event handlers not verifiable; author claim unlinked and contradicted by metadata.",
+      "evidence": "AUTHOR_REPORTED: 'Unit tests added for every handler' (PR body). File list in PR metadata: 22 handlers (handler01–22), but only 18 test files (.test.ts files visible: handler01–18). Handler19–22 missing test files in metadata. Additionally, only handler01.test.ts readable; cannot verify others. CI_GITHUB: 'test' check passes, but job scope and branch coverage unknown.",
+      "confidence": "High",
+      "scenario": "Author claims coverage for all handlers; PR metadata lists only 18 test files out of 22 handlers. Tests for handlers 19–22 either absent, mis-named, or hidden by diff cutoff.",
+      "confirm_or_refute": "Reviewer inspects full PR (local clone) to count test files. OR reviewer checks CI job logs ('test' check) to see which handlers were exercised and pass/fail counts.",
+      "next_action": "Confirm via local diff or CI logs: do handlers 19–22 have tests? If not, request author to add them. If yes, request author clarify the discrepancy."
+    },
+    {
+      "id": "V2",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Migration path (add → backfill → drop) not verifiable for data loss or rollback faults.",
+      "evidence": "TEST_SOURCE: Three migration files present (0050, 0051, 0052) in PR metadata. 0050: add table (60 lines), 0051: backfill (140 lines), 0052: drop column (4 lines). No readable test of backfill correctness or drop reversibility. CI 'test' green, but no evidence that migrations themselves were tested (migration-specific tests may not run in CI by default).",
+      "confidence": "High",
+      "scenario": "Migration 0051 backfill may be incomplete (e.g., concurrent inserts missed, or WHERE clause excludes some orders). Migration 0052 drop is irreversible; if projection logic is wrong, orders.status is lost with no rollback.",
+      "confirm_or_refute": "Reviewer reads 0050–0052 in full (local or per-file). Verify: (1) backfill WHERE covers all orders, (2) backfill is idempotent, (3) drop is guarded by migration safeguards. OR run migrations in test DB and verify state consistency.",
+      "next_action": "Read migrations in full and confirm idempotency and atomicity. Request author add migration test or manual verification steps."
+    },
+    {
+      "id": "R1",
+      "category": "DESIGN_RISK",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "BOTH",
+      "summary": "Event handler logic (22 functions) may have state transition bugs; only 2 handlers partially visible.",
+      "evidence": "EXECUTED: Read handler01.ts and handler02.ts at head. Handler01 (onOrderPlaced): simple, creates initial projection, version 1. Handler02 (onOrderPaid): checks `state.status === 'placed'` before transitioning. Pattern: pure functions, no side effects. Hypothesis: edge cases in 22 handlers collectively may violate state machine invariants (e.g., out-of-order events, re-applied events). Only 2/22 visible; confidence low due to incomplete review.",
+      "confidence": "Low",
+      "location": "src/orders/events/handlers/ (22 files, only handler01.ts and handler02.ts readable)",
+      "scenario": "A handler receives an event in an unexpected state, or an event is re-applied (idempotency failure) and inconsistent projection results.",
+      "confirm_or_refute": "Reviewer reads all 22 handler functions in full. Verify: (1) each handler checks pre-conditions (state.status or version), (2) all handlers are idempotent or guarded by event deduplication upstream, (3) no handler mutates shared state.",
+      "gate_fail": false,
+      "next_action": "Full review of handlers. Request author confirm idempotency guarantees (event log deduplication or handler-level checks?)."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "All 22 event handlers apply correctly and are idempotent.",
+      "available": "AUTHOR_REPORTED: 'unit tests for every handler'; CI_GITHUB: test check green. TEST_SOURCE: handler01.test.ts exists (minimal).",
+      "missing": "Cannot read tests for handlers 2–22. CI logs not inspected. No confirmation of idempotency or handler-level deduplication."
+    },
+    {
+      "behavior": "Backfill migration (0051) covers all existing orders without data loss.",
+      "available": "TEST_SOURCE: migration SQL present in PR. Author claim: implied by PR description (events derived from orders).",
+      "missing": "No test of backfill correctness. No verification of WHERE clause coverage or atomicity. No rollback test."
+    },
+    {
+      "behavior": "Projection state transitions are consistent (no missing events or out-of-order application).",
+      "available": "TEST_SOURCE: handler01.test.ts checks projection creation.",
+      "missing": "No integration test of event sequence (OrderPlaced → OrderPaid → ...). No test of re-applied event handling."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/orders/events/handlers/ (all 22 handlers)",
+      "why": "Risk: state machine correctness (22 pure functions apply events to projection). Spot-check shows handler01–02 follow pattern (pre-condition checks, version increment) but 20 others unread. Check: idempotency guards, error cases, unreachable state transitions."
+    },
+    {
+      "location": "src/db/migrations/0050–0052 (table, backfill, drop)",
+      "why": "Risk: irreversible schema change (column drop). Backfill must cover all orders without data loss. Check: WHERE clauses, transaction scope, rollback safety."
+    },
+    {
+      "location": "src/orders/projections/ (8 projection files)",
+      "why": "Risk: projections are the new source of truth for order state. Check: consistency rules, caching (if any), update frequency."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "PASS",
+      "evidence": "PR title and body clearly state intent: event-sourced refactor. Design doc linked (though not read due to external URL). 2/2 points."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "PASS",
+      "evidence": "Scope outlined: 'Orders derived from events, status dropped.' Commit structure (event store, handlers, projections, migrations, tests) implies logical split. 1/2 points (not all data flows detailed)."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "FAIL",
+      "evidence": "Author claims 'unit tests added for every handler' but provides no commands, links, or results. Claim is unverified and contradicted by test file count (18 visible, 22 handlers). 1/3 points (claim only, unlinked)."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "FAIL",
+      "evidence": "No mention of migration risks, rollback strategy, or guidance on what reviewer should focus on. 0/2 points."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "UNKNOWN",
+      "evidence": "Change Quality NOT_ASSESSED. Only 2 handlers visible; both follow expected pattern (pre-checks, state increment). Hypothesis: 22 handlers collectively may have state-machine bugs. Cannot confirm without full review."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "UNKNOWN",
+      "evidence": "Change Quality NOT_ASSESSED. No confirmed defects in visible code, but irreversible schema migration (drop column) is high-risk without full test coverage. Idempotency of backfill unknown."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "UNKNOWN",
+      "evidence": "Change Quality NOT_ASSESSED. api.ts has 95 add, 70 del. Response structure for GET /orders may change; callers expecting orders.status may break. Not readable."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "UNKNOWN",
+      "evidence": "Change Quality NOT_ASSESSED. Event-sourced architecture is sound in principle (22 handlers, 8 projections). Potential latency concern (projections must be kept in sync) not addressed."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "FAIL",
+      "evidence": "CI_GITHUB: test, lint, build all green. But no visibility into what 'test' job runs, which handlers are covered, and which edge cases are tested. Relevance unclear. 2/3 points (green but opaque)."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "FAIL",
+      "evidence": "TEST_SOURCE: handler01.test.ts covers only happy path (create projection, check version). No test of state transitions, re-applied events, out-of-order, or migration edge cases. 0/3 points."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "FAIL",
+      "evidence": "TEST_SOURCE: No integration test (event sequence), no migration test, no projection-consistency test visible. Author provides no manual verification (screenshots, rollback demo, etc.). 0/2 points."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "FAIL",
+      "evidence": "I1 (REVIEW_INCOMPLETE BLOCKER), V1–V2 (MAJOR gaps), R1 (MAJOR hypothesis) are all unresolved. Change Quality NOT_ASSESSED. Too many unknowns for approval."
+    }
+  ],
+  "why_action": [
+    "Full-mode G4 FAIL: 56 files total, only 3 inspected. Uninspected risk paths (handlers, projections, migrations) block APPROVE_CANDIDATE.",
+    "Change Quality NOT_ASSESSED due to inaccessible diff and unreadable files. Author readiness is low (5/10: good intent, poor verification summary, no risk notes).",
+    "REVIEW_INCOMPLETE BLOCKER: diff too large; only per-file patches for 3 files available. Reviewer cannot proceed without local clone or smaller PR.",
+    "Line count (25K add) does not drive this; technical inaccessibility and incomplete review do."
+  ],
+  "would_change": [
+    "Reviewer obtains local clone and re-reads all 22 handlers in full (L: fixes I1, G4 → PASS) → rule 3 could shift to rule 4 (APPROVE_CANDIDATE, if all other gates pass and no defects confirmed).",
+    "Author clarifies test coverage (handler19–22 test files present, CI logs confirm 22/22 coverage) + reviewer confirms migration safety (L: fixes V1–V2) → MAJOR gaps resolve, G2 confirmed PASS → rule 2 condition weakens, COMMENT → CONTINUE_REVIEW.",
+    "PR is split into 2 smaller PRs (handlers/projections vs. migrations; each <10K lines) → both become reviewable, Change Quality can be assessed, I1 resolved → rule 3 can proceed to APPROVE_CANDIDATE per gate results."
+  ],
+  "next_owner_detail": "Reviewer (REVIEWER owner) must: (1) request local clone access from author or ask author to split PR into reviewable chunks (<20K lines each); (2) once local access obtained, re-run `/review-readiness 890 --mode full` to assess Change Quality and confirm/refute R1, V1, V2; (3) decide merge path (APPROVE_CANDIDATE, COMMENT, or REQUEST_CHANGES depending on findings).",
+  "comment_draft": "Thanks for the detailed event-sourcing refactor, @dev-e. Great scope split (event store, handlers, projections, migrations). Two blockers for review:\n\n- [ ] Diff exceeds GitHub's 20K-line limit (HTTP 406). Either share a local clone for deep review, or split this into 2–3 smaller PRs (e.g., handlers+projections in one, migrations in another, ≤10K lines each).\n- [ ] Test coverage claim: PR says 'unit tests for every handler' but only 18 test files visible for 22 handlers. Please confirm handlers 19–22 have tests, or add them.\n\nMigration safety: 0051 (backfill) and 0052 (drop) are irreversible. Once local review begins, I'll check WHERE clause coverage and rollback strategy.\n\nI'll re-assess once this is resolved.",
+  "next_command": "/review-readiness acme/shop#890 --mode full",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "PR checks",
+      "detail": "lint, test, build all SUCCESS"
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Verification claim",
+      "detail": "'Unit tests added for every handler' (PR body, unverified)"
+    },
+    {
+      "tag": "EXECUTED",
+      "item": "Diff retrieval",
+      "detail": "HTTP 406: diff >20K lines, not retrievable"
+    },
+    {
+      "tag": "EXECUTED",
+      "item": "File reads",
+      "detail": "handler01.ts, handler02.ts, handler01.test.ts read in full; 53 other files opaque"
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Test files in metadata",
+      "detail": "18 test files visible (handler01–18.test.ts); 22 handlers present (handler01–22.ts)"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Migration tests",
+      "detail": "No test of backfill correctness or drop reversibility found"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Integration tests",
+      "detail": "No event-sequence or projection-consistency test visible"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Branch protection rules",
+      "detail": "403 Forbidden: unreadable"
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/orders/events/handlers/ (22 handlers), src/orders/projections/ (8 projections), src/orders/eventStore.ts, src/orders/orderService.ts, src/orders/api.ts",
+      "notes": "Event-sourced order model. Handlers: pure functions, state transitions. Projections: derived state. Critical for correctness."
+    },
+    {
+      "class": "config-migration-infra",
+      "files": "src/db/migrations/0050–0052 (add table, backfill, drop column)",
+      "notes": "Irreversible schema migration. High risk. Backfill must cover all orders; drop has no rollback."
+    },
+    {
+      "class": "tests",
+      "files": "tests/orders/events/handler01–18.test.ts (18 files)",
+      "notes": "Unit tests for handlers. Only handler01.test.ts readable (minimal: create projection, check version). Handlers 19–22 tests absent or unreadable."
+    },
+    {
+      "class": "generated-noise",
+      "files": "src/generated/orderEvents.pb.ts (18,400 lines), package-lock.json",
+      "notes": "Protobuf code (generated). Lock file. Not reviewed."
+    }
+  ],
+  "coverage": {
+    "inspected": 0,
+    "total": 5
+  },
+  "risk_paths": [
+    {
+      "path": "src/orders/events/handlers/ (22 functions)",
+      "inspected": false,
+      "note": "Only handler01.ts and handler02.ts read (partial: ~6 lines each). 20 handlers unread. Spot-check shows idiomatic pattern (pre-checks, state increment) but collective state-machine correctness unknown. Marked false: 2/22 is not 'all'."
+    },
+    {
+      "path": "src/db/migrations/0050–0052 (table, backfill, drop)",
+      "inspected": false,
+      "note": "Present in metadata (205 total lines) but not readable. High-risk: irreversible drop, backfill coverage unknown. Marked false: not read."
+    },
+    {
+      "path": "src/orders/projections/ (8 functions)",
+      "inspected": false,
+      "note": "8 projection files in metadata; none readable. Projection consistency is critical (source of truth for order state). Marked false: not read."
+    },
+    {
+      "path": "src/orders/orderService.ts (220 add, 610 del)",
+      "inspected": false,
+      "note": "Major changes (calls to handlers/projections refactored). Not readable. Marked false."
+    },
+    {
+      "path": "src/orders/api.ts (95 add, 70 del)",
+      "inspected": false,
+      "note": "API endpoint changes (orders.status may be removed). Callers may break. Not readable. Marked false."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "UNKNOWN",
+      "evidence": "UNKNOWN (scope 3/56): only handler01.ts and handler02.ts inspected (spot-check). No CONFIRMED CODE_DEFECT found in visible code, but majority of risk paths (handlers, projections, migrations) unread. Full scope unknown; G1 cannot be PASS. Per rubric, UNKNOWN in triage → always UNKNOWN in full when coverage low."
+    },
+    "G2": {
+      "result": "UNKNOWN",
+      "evidence": "Branch protection unreadable (403); required_checks_status is unknown. Visible CI checks (lint, test, build) all pass (CI_GITHUB), but cannot confirm whether these are the complete required set. Marked UNKNOWN per gate rule: 'a required check is pending, skipped, cancelled, never ran on head, or the required set is unreadable.'"
+    },
+    "G3": {
+      "result": "UNKNOWN",
+      "evidence": "Branch protection unreadable (403). Project rules (CONTRIBUTING, CODEOWNERS, etc.) not retrievable. Cannot assess whether PR violates any mandated gates. Marked UNKNOWN."
+    },
+    "G4": {
+      "result": "FAIL",
+      "evidence": "FAIL: Coverage 3/56 files inspected. Per decision-policy.md, 'Every path in M was inspected' for PASS. M = 5 risk paths (handlers, migrations, projections, orderService, api). None fully inspected (handlers: 2/22 read, others: 0). Full mode requires all paths read. G4 FAIL is certain."
+    },
+    "G5": {
+      "result": "UNKNOWN",
+      "evidence": "Critical behavior mapping unknown. Handler01 test exists (create projection, version) but does not cover edge cases or idempotency. CI 'test' green but job scope opaque. Cannot establish which tests target which behaviors or whether CI runs them. G5 cannot be PASS."
+    }
+  },
+  "required_checks_status": "unknown",
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "build",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": "None observed. PR body and code comments are descriptive and non-adversarial."
+}
