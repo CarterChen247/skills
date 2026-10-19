@@ -1,0 +1,426 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/billing",
+  "pr": 512,
+  "url": "https://github.com/acme/billing/pull/512",
+  "title": "Dedupe Stripe refund webhooks (fix double refunds, INC-2291)",
+  "mode": "recheck",
+  "assessed_at": "2026-10-19T06:40:07Z",
+  "head_sha": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+  "size": {
+    "additions": 55,
+    "deletions": 2,
+    "files": 3
+  },
+  "report_path": "<skill-dir>/evals/out-haiku2/case-f/20261019T064007Z-recheck.html",
+  "summary": [
+    "Fixes Stripe refund webhook double-crediting by recording the webhook event ID (not refund ID) in a dedupe table.",
+    "Adds UNIQUE index to prevent concurrent redeliveries from both applying the same refund.",
+    "Replaces manual test with real end-to-end and concurrent delivery tests; all required CI checks pass."
+  ],
+  "decision": {
+    "readiness": "READY_FOR_REVIEW",
+    "merge": "APPROVE_CANDIDATE",
+    "owner": "REVIEWER",
+    "why": [
+      "All previous blockers (D1, V1) resolved: dedupe key now matches, tests now real, unique index in place.",
+      "All gates PASS: G1 (no blocking defects in scope 3/3), G2 (all 3 required checks green), G3 (no project rules violated), G4 (all 3 risk paths re-read at head), G5 (critical behavior tested and CI_GITHUB pass).",
+      "No MAJOR+ open issues; only low-risk confirmed decisions remain."
+    ]
+  },
+  "delta": {
+    "prev_assessed_at": "2026-10-15T09:12:00Z",
+    "prev_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "rows": [
+      {
+        "id": "D1",
+        "was": "CONFIRMED BLOCKER",
+        "now": "RESOLVED",
+        "evidence": "Fixed in commit f6f6f6a: line 26 refundHandler.ts now records event.id (not refund.id). Redelivery test at line 13-17 confirms behavior: first call returns 'processed', second returns 'duplicate', balance stays 500 (not 1000). CI_GITHUB pass (run 9960)."
+      },
+      {
+        "id": "V1",
+        "was": "CONFIRMED MAJOR",
+        "now": "RESOLVED",
+        "evidence": "Replaced seeded duplicate test with real redelivery test (line 13-17) and concurrent delivery test (line 19-23). Both exercise the actual code path, not database seeds. Redelivery test calls handleRefundEvent twice with same event; concurrent test uses Promise.allSettled. Both assert balance == 500. CI_GITHUB pass."
+      },
+      {
+        "id": "R1",
+        "was": "HYPOTHESIS MINOR",
+        "now": "RESOLVED",
+        "evidence": "Fixed in commit f6f6f6b: migration line 5 now creates UNIQUE INDEX instead of regular INDEX. Concurrent delivery test (line 19-23) confirms one call succeeds and one fails with UNIQUE violation. CI_GITHUB pass."
+      }
+    ],
+    "new_evidence": [
+      "Author comment on PR (after previous assessment) outlined fixes and linked CI run 9960.",
+      "Commits f6f6f6a and f6f6f6b implemented all three remedies: dedupe key, unique index, and proper tests.",
+      "All 3 required checks pass at new head: lint, test (run 9960), migrations-check."
+    ],
+    "new_risks": [],
+    "change": "REQUEST_CHANGES → APPROVE_CANDIDATE because G1 FAIL → PASS (D1 RESOLVED), G5 FAIL → PASS (V1 RESOLVED), no MAJOR+ issues remain."
+  },
+  "scores": {
+    "author_readiness": 9,
+    "change_quality": 9,
+    "verification_confidence": 9,
+    "operational_risk": 2
+  },
+  "score_evidence": {
+    "author_readiness": "Author provided clear problem statement (INC-2291), approach, data flow diagram, verification plan, and rollback notes. All remedies documented in PR comments.",
+    "change_quality": "Critical defect (double refund) confirmed and fixed with matching dedupe key. Unique index prevents concurrent race. Additive migration, no breaking changes. applyRefund unchanged.",
+    "verification_confidence": "Redelivery test calls handleRefundEvent twice, asserts 'duplicate' on second call and balance = 500 (CI_GITHUB pass). Concurrent delivery test uses Promise.allSettled, asserts only one succeeds (CI_GITHUB pass). Migration verified locally per PR body.",
+    "operational_risk": "Additive migration with no downtime. Rollback is drop table (documented). Impacts only Stripe refund webhook dedupe path, which is well-scoped."
+  },
+  "low_evidence": [],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Intent and requirements",
+        "points": 2,
+        "max": 2,
+        "evidence": "Problem (INC-2291, incident with 2 customers double-refunded), approach (dedupe with event.id), data flow, and verification plan all clear."
+      },
+      {
+        "criterion": "Important changes and scope explained",
+        "points": 2,
+        "max": 2,
+        "evidence": "PR body clearly states 'new processed_events table', 'dedupe lookup', 'apply + insert in same txn'. Scope limited to Stripe refund deduping."
+      },
+      {
+        "criterion": "Verification summary exists",
+        "points": 2,
+        "max": 2,
+        "evidence": "PR body lists 3 tests: single apply, duplicate skipped, unknown charge rejected. CI job green (run 9960). Local migration test run reported."
+      },
+      {
+        "criterion": "Known risks and review focus identified",
+        "points": 3,
+        "max": 2,
+        "evidence": "Risk: migration is additive, rollback is drop table. Review focus: dedupe lookup/insert in refundHandler.ts. Author comment clarifies unique index handles concurrent redelivery."
+      }
+    ],
+    "change_quality": [
+      {
+        "criterion": "Functional correctness",
+        "points": 3,
+        "max": 3,
+        "evidence": "Dedupe key now matches: event.id stored and looked up (was refund.id). Double-refund defect (D1) confirmed fixed by redelivery test: balance stays 500."
+      },
+      {
+        "criterion": "No unresolved security / data-integrity defects",
+        "points": 3,
+        "max": 3,
+        "evidence": "Unique index prevents concurrent redeliveries from both inserting and applying. Concurrent delivery test confirms one succeeds, one fails. Transaction ensures atomicity."
+      },
+      {
+        "criterion": "API contracts and compatibility",
+        "points": 3,
+        "max": 3,
+        "evidence": "handleRefundEvent interface unchanged. applyRefund unchanged. Migration additive only. Webhook handler returns 'processed' or 'duplicate' (consistent)."
+      }
+    ],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated tests",
+        "points": 3,
+        "max": 3,
+        "evidence": "All 3 required checks pass (lint, test run 9960, migrations-check). Redelivery test exercises real code, not seeds. Concurrent test uses Promise.allSettled."
+      },
+      {
+        "criterion": "Important edge cases covered",
+        "points": 3,
+        "max": 3,
+        "evidence": "Redelivery (line 13-17): calls twice, expects 'duplicate' on second, balance 500. Concurrent (line 19-23): parallel calls, one succeeds one fails, balance 500. Unknown charge (line 25-27): rejects with error."
+      },
+      {
+        "criterion": "Necessary integration / manual verification complete",
+        "points": 3,
+        "max": 3,
+        "evidence": "PR body: 'Ran migration up/down locally on a copy of staging schema.' No integration environment needed; webhooks tested end-to-end."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "L",
+        "evidence": "Additive migration (no data deletion). Rollback is drop table. Scope limited to Stripe refund webhook dedupe."
+      },
+      {
+        "factor": "Deployment and rollback complexity",
+        "level": "L",
+        "evidence": "No schema breaking changes. Unique index creation is fast. Rollback documented and simple (drop table)."
+      }
+    ]
+  },
+  "primary_classification": "All previous issues (D1 defect, V1 verification gap, R1 design risk) RESOLVED. No new defects or gaps identified.",
+  "issues": [
+    {
+      "id": "D1",
+      "category": "CODE_DEFECT",
+      "severity": "BLOCKER",
+      "status": "RESOLVED",
+      "owner": "AUTHOR",
+      "summary": "Dedupe lookup uses event.id (evt_) but insert stored refund.id (re_); lookup never matches, so every Stripe redelivery re-applies the refund (double credit).",
+      "evidence": "Previous assessment (2026-10-15) found CONFIRMED BLOCKER: refundHandler.ts:26 stored refund.id. Recheck (2026-10-19): commit f6f6f6a changed line 26 to event.id. Redelivery test (test.ts:13-17) now calls handleRefundEvent twice, expects 'duplicate' on second call, asserts balance == 500 (not 1000, confirming no double refund). CI_GITHUB pass (run 9960).",
+      "confidence": "High",
+      "location": "src/webhooks/refundHandler.ts:18,26",
+      "scenario": "Stripe sends charge.refunded with event.id='evt_1'. Handler looks up processedEvents where eventId='evt_1' (returns null). Applies refund, inserts with eventId='evt_1'. Redelivery: lookup finds eventId='evt_1', returns 'duplicate', no re-apply.",
+      "fix": "Store event.id instead of refund.id: line 26 changed from `refund.id` to `event.id`. Lookup (line 18) already used event.id.",
+      "gate_fail": false,
+      "next_action": "Previously fixed by author; now closed."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "owner": "AUTHOR",
+      "summary": "'duplicate' test seeds processed_events manually with evt_1, masking D1; no end-to-end redelivery test.",
+      "evidence": "Previous assessment found CONFIRMED MAJOR: test.ts:13 seeded processedEvents by hand, never exercised real dedupe in handleRefundEvent. Recheck: entire test block (lines 12-18) replaced with real redelivery test (lines 13-17) and concurrent delivery test (lines 19-23). Redelivery test calls handleRefundEvent twice with same event object, asserts second call returns 'duplicate', asserts balance == 500. Concurrent test calls in parallel via Promise.allSettled, expects one 'processed' and one failure. Both exercise real code path. CI_GITHUB pass (run 9960).",
+      "confidence": "High",
+      "location": "tests/webhooks/refundHandler.test.ts:13",
+      "scenario": "handleRefundEvent called with same event twice. First call: lookup misses, applies refund, inserts processedEvent, returns 'processed'. Second call: lookup hits, logs 'duplicate refund event', returns 'duplicate'. Balance is 500 (one application).",
+      "fix": "Replace seeded test with real redelivery test (lines 13-17) that calls handleRefundEvent twice and asserts balance == 500, plus concurrent delivery test (lines 19-23) that parallelizes calls and asserts one succeeds.",
+      "gate_fail": false,
+      "next_action": "Previously fixed by author; now closed."
+    },
+    {
+      "id": "R1",
+      "category": "DESIGN_RISK",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "owner": "AUTHOR",
+      "summary": "No unique constraint on processed_events.event_id; two concurrent deliveries can both pass the lookup.",
+      "evidence": "Previous assessment found HYPOTHESIS MINOR: migration line 5 created regular INDEX, not UNIQUE. Recheck: commit f6f6f6b changed INDEX to UNIQUE INDEX. Concurrent delivery test (test.ts:19-23) now exercises this: calls handleRefundEvent twice in parallel via Promise.allSettled, filters for 'processed' results, expects exactly 1 (the other loses the unique constraint race). Asserts balance == 500 (not 1000). CI_GITHUB pass (run 9960).",
+      "confidence": "High",
+      "location": "src/db/migrations/0043_processed_events.sql:5",
+      "scenario": "Two concurrent Stripe redeliveries of same event arrive simultaneously. Both call handleRefundEvent. Both pass the lookup (eventId not yet in table). First transaction inserts processedEvents with unique constraint, commits. Second transaction tries to insert same eventId, violates UNIQUE constraint, rolls back, caller receives error. Result: balance == 500 (one application), second caller sees transient error, Stripe retries.",
+      "fix": "Change INDEX to UNIQUE INDEX on processed_events(event_id): line 5 changed from `CREATE INDEX` to `CREATE UNIQUE INDEX`. Concurrent delivery test confirms correct behavior.",
+      "gate_fail": false,
+      "next_action": "Previously fixed by author; now closed."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "Redelivery of same Stripe event applies refund exactly once",
+      "available": "TEST_SOURCE: tests/webhooks/refundHandler.test.ts:13-17 (redelivery test calls handleRefundEvent twice). CI_GITHUB: lint, test (run 9960), migrations-check all pass. Balance assertion in test confirms no double credit.",
+      "missing": "None (gap resolved)."
+    },
+    {
+      "behavior": "Concurrent deliveries of same event apply refund exactly once",
+      "available": "TEST_SOURCE: tests/webhooks/refundHandler.test.ts:19-23 (concurrent delivery test via Promise.allSettled). CI_GITHUB: test run 9960 pass. Balance assertion confirms no double credit.",
+      "missing": "None (gap resolved)."
+    },
+    {
+      "behavior": "Unique constraint prevents duplicate insertions",
+      "available": "TEST_SOURCE: tests/webhooks/refundHandler.test.ts:19-23 (expects one 'processed' result, one error). CI_GITHUB: test run 9960 pass.",
+      "missing": "None (gap resolved)."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/webhooks/refundHandler.ts:18-26",
+      "why": "Core dedupe logic: lookup uses event.id (line 18), insert uses event.id (line 26). Critical for double-refund bug fix. Read callers to understand event.data.object vs event.id distinction."
+    },
+    {
+      "location": "src/db/migrations/0043_processed_events.sql",
+      "why": "Schema change: UNIQUE index ensures concurrent deliveries conflict. Verify index is applied and rollback path (drop table) is safe. Additive only; no data migration."
+    },
+    {
+      "location": "tests/webhooks/refundHandler.test.ts:13-23",
+      "why": "Test coverage for redelivery (line 13-17) and concurrent delivery (line 19-23) now real, not seeded. Verify test setup (charge seed) is correct and assertions match intended behavior."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "PASS",
+      "evidence": "PR body clearly describes incident INC-2291 (2 customers double-refunded), cites issue #377, outlines approach (dedupe with event.id in processedEvents), and explains data flow."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "PASS",
+      "evidence": "PR body: 'New processed_events table (migration 0043, additive only)', 'dedupe lookup', 'apply refund and record event in same DB transaction'. Scope limited to Stripe refund webhook handling; unrelated code unchanged."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "PASS",
+      "evidence": "PR body lists test command, 3 tests (single apply, duplicate skipped, unknown charge rejected), CI link (run 9911 for initial submission), and local migration verification. Author comment adds CI run 9960 for updated fixes."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "PASS",
+      "evidence": "PR body section 'Risks / rollback' states migration is additive and rollback is drop table. States 'Review focus: the dedupe lookup/insert in refundHandler.ts'. Author comment explains unique index handles concurrent redelivery."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "PASS",
+      "evidence": "Event flow correct: lookup checks processedEvents.event_id, apply refund + insert in transaction, return 'processed' or 'duplicate'. Redelivery test confirms state: first call applies (balance 500), second call returns 'duplicate' (balance stays 500)."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "PASS",
+      "evidence": "Double-refund defect (D1) fixed with correct key (event.id). Concurrent race (R1) fixed with UNIQUE index. Transaction ensures atomicity. Concurrent delivery test confirms balance == 500 with parallel calls."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "PASS",
+      "evidence": "handleRefundEvent signature unchanged, returns 'processed'|'duplicate'. applyRefund unchanged. Webhook handler integration unchanged. Migration additive; no breaking changes to existing tables."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "PASS",
+      "evidence": "Dedupe table is straightforward (event_id, processed_at). Unique index is standard concurrency pattern. No new dependencies. Transaction-based consistency, no eventual consistency issues."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "PASS",
+      "evidence": "All 3 required checks pass: lint (SUCCESS), test run 9960 (SUCCESS), migrations-check (SUCCESS). Test file contains 4 tests: single apply, redelivery, concurrent, unknown charge. All green."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "PASS",
+      "evidence": "Redelivery (same event twice): test line 13-17, expects 'duplicate' second time. Concurrent (parallel calls): test line 19-23, expects one success one failure. Unknown charge (bad charge.id): test line 25-27, expects error. All tested."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "PASS",
+      "evidence": "PR body: 'Ran migration up/down locally on a copy of staging schema.' No integration environment needed; unit tests + CI sufficient. Webhook path end-to-end tested via handleRefundEvent calls."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "PASS",
+      "evidence": "All previous blockers resolved: D1 (dedupe key), V1 (test coverage), R1 (unique index). No new unknowns. Checks green. Migration verified locally."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "PASS",
+      "evidence": "PASS (scope 3/3): No CONFIRMED BLOCKER CODE_DEFECT in inspected risk paths. D1 was BLOCKER, now RESOLVED. R1 was HYPOTHESIS (not BLOCKER). No new defects found in recheck of 3 risk paths: refundHandler.ts (dedupe key fixed), refunds.ts (unchanged, callee verified), migration (index made UNIQUE)."
+    },
+    "G2": {
+      "result": "PASS",
+      "evidence": "PASS: All 3 required checks (lint, test, migrations-check) completed successfully on head (run 9960). Branch protection requires lint, test, migrations-check; all present and green."
+    },
+    "G3": {
+      "result": "PASS",
+      "evidence": "PASS: No mandated gate exists (CONTRIBUTING.md, CODEOWNERS, security policy not mentioned in case.md; no violations observed). PR conforms to standard billing/refund change requirements."
+    },
+    "G4": {
+      "result": "PASS",
+      "evidence": "PASS: All 3 risk paths inspected at head (recheck mode, full depth re-read): src/webhooks/refundHandler.ts (dedupe key verified), src/db/migrations/0043_processed_events.sql (unique index verified), tests/webhooks/refundHandler.test.ts (real redelivery + concurrent tests verified)."
+    },
+    "G5": {
+      "result": "PASS",
+      "evidence": "PASS: Critical behavior (redelivery dedupe, concurrent dedupe) has targeting tests (TEST_SOURCE: test.ts:13-17 for redelivery, line 19-23 for concurrent). CI_GITHUB pass (run 9960): both tests exercise the real code path and pass. Previous V1 gap (seeded test masking the defect) resolved."
+    }
+  },
+  "required_checks_status": "ok",
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "migrations-check",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": "None observed.",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "All required checks pass",
+      "detail": "lint, test (run 9960), migrations-check all SUCCESS on head f6f6f6f..."
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Redelivery test",
+      "detail": "tests/webhooks/refundHandler.test.ts:13-17: calls handleRefundEvent twice with same event, expects 'duplicate' on second, asserts balance == 500."
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Concurrent delivery test",
+      "detail": "tests/webhooks/refundHandler.test.ts:19-23: calls handleRefundEvent twice in parallel via Promise.allSettled, expects one 'processed' (balance 500), one error."
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Author comment on PR",
+      "detail": "After previous REQUEST_CHANGES, author states: 'Fixed in f6f6f6a: we now record event.id. Also made event_id UNIQUE (concurrent redelivery now fails the second txn → 500 → Stripe retries → sees duplicate).' Links CI run 9960."
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Migration verification",
+      "detail": "PR body: 'Ran migration up/down locally on a copy of staging schema.' Confirms migration is safe and reversible."
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/webhooks/refundHandler.ts, src/db/migrations/0043_processed_events.sql",
+      "notes": "Handler: webhook dedupe logic. Migration: schema for tracking processed events."
+    },
+    {
+      "class": "tests",
+      "files": "tests/webhooks/refundHandler.test.ts",
+      "notes": "Unit tests for redelivery, concurrent delivery, and error paths."
+    }
+  ],
+  "coverage": {
+    "inspected": 3,
+    "total": 3
+  },
+  "risk_paths": [
+    {
+      "path": "src/webhooks/refundHandler.ts:handleRefundEvent",
+      "inspected": true,
+      "note": "Recheck: re-read at head (line 15-30). Dedupe key fixed (event.id), lookup and insert now aligned. Callers (Stripe webhook handler) unchanged. Callees (applyRefund, db.transaction) unchanged."
+    },
+    {
+      "path": "src/billing/refunds.ts:applyRefund",
+      "inspected": true,
+      "note": "Recheck: unchanged since previous assessment. Verified no new calls or callers. applyRefund itself not modified by this PR."
+    },
+    {
+      "path": "src/db/migrations/0043_processed_events.sql",
+      "inspected": true,
+      "note": "Recheck: re-read at head (line 1-5). Changed from INDEX to UNIQUE INDEX (line 5). Prevents concurrent duplicates. Rollback path (drop table) safe and documented."
+    }
+  ],
+  "why_action": [
+    "All three previous BLOCKER/MAJOR issues are now RESOLVED with high-confidence fixes and real test coverage.",
+    "All five gates (G1–G5) are PASS: no confirmed defects in scope, all required checks green, no project violations, all risk paths inspected, critical behaviors tested and CI green.",
+    "Author's follow-up commits (f6f6f6a dedupe key, f6f6f6b unique index + tests) directly addressed every feedback item from the previous REQUEST_CHANGES assessment."
+  ],
+  "would_change": [
+    "No evidence would change this decision upward (APPROVE_CANDIDATE is the strongest recommendation). Change would only lower if new defects were discovered, but none exist in recheck.",
+    "Downward change: discovery of an unfixed blocker in the code (e.g., dedupe key still wrong) would immediately trigger REQUEST_CHANGES, but code inspection and test results confirm the fix."
+  ],
+  "next_owner_detail": "Reviewer should perform the final merge decision. No author action required; all author feedback has been addressed. Reviewer should: (1) skim the PR body and author comment to confirm intent is clear, (2) glance at the three inspected risk paths to spot-check the fixes, (3) if confident, approve and merge; or (4) if any concern remains, run 'recheck' again or move to full review.",
+  "comment_draft": "Excellent follow-up! Your fixes directly addressed the three findings:\n- D1 (dedupe key): now records event.id (not refund.id) ✓\n- V1 (test coverage): redelivery and concurrent delivery tests now real, not seeded ✓\n- R1 (unique index): now UNIQUE to block concurrent duplicates ✓\n\nAll required checks pass, and the logic is solid. This is ready to merge. Thanks for the speed.",
+  "next_command": "/review-readiness acme/billing/pull/512 --mode full",
+  "evidence_collected": {
+    "pr_metadata": "gh pr view result",
+    "checks": "gh pr checks result (all green)",
+    "required_checks": "branch protection (ok)",
+    "per_file_patches": "incremental.patch (git diff b2b2..f6f6) shows 3 changes",
+    "risk_paths": "3 paths: handler, refunds, migration",
+    "spot_checks": "redelivery test, concurrent test, unique index"
+  }
+}

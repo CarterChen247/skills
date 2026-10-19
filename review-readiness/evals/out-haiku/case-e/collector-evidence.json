@@ -1,0 +1,208 @@
+{
+  "pr": {
+    "repo": "acme/shop",
+    "number": 890,
+    "url": "https://github.com/acme/shop/pull/890",
+    "title": "Event-sourced order pipeline",
+    "author": "dev-e",
+    "state": "OPEN",
+    "is_draft": false,
+    "base": "main",
+    "head_sha": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+    "additions": 25389,
+    "deletions": 1520,
+    "files": 56,
+    "labels": [],
+    "review_decision": "REVIEW_REQUIRED",
+    "merge_state": "BLOCKED",
+    "linked_issues": []
+  },
+  "author_content": {
+    "body": "Refactors the order pipeline to an event-sourced model (design doc: https://acme.atlassian.net/wiki/ORD-ES). Orders are now derived from `order_events`; `orders.status` is dropped in favor of a projection.\n\nGenerated protobuf types included. Unit tests added for every handler.",
+    "author_comments": [],
+    "commit_headlines": [
+      "event store",
+      "handlers",
+      "projections",
+      "migrations",
+      "tests",
+      "regen protos",
+      "fix tests",
+      "drop status column"
+    ],
+    "linked_docs": [
+      "https://acme.atlassian.net/wiki/ORD-ES (not accessible via GitHub)"
+    ]
+  },
+  "other_comments_summary": [],
+  "checks": [
+    {"name": "lint", "state": "SUCCESS", "workflow": "CI", "link": ""},
+    {"name": "test", "state": "SUCCESS", "workflow": "CI", "link": ""},
+    {"name": "build", "state": "SUCCESS", "workflow": "CI", "link": ""}
+  ],
+  "ci_semantics": [
+    {"check": "lint", "what_it_runs": "linting checks", "revision": "unknown", "evidence": "success status only"},
+    {"check": "test", "what_it_runs": "test suite", "revision": "unknown", "evidence": "success status only"},
+    {"check": "build", "what_it_runs": "build", "revision": "unknown", "evidence": "success status only"}
+  ],
+  "required_checks": {
+    "status": "unknown",
+    "contexts": []
+  },
+  "project_rules": [],
+  "file_map": [
+    {
+      "class": "core",
+      "files": [
+        "src/orders/events/handlers/handler01.ts",
+        "src/orders/events/handlers/handler02.ts",
+        "src/orders/events/handlers/handler03.ts",
+        "src/orders/events/handlers/handler04.ts",
+        "src/orders/events/handlers/handler05.ts",
+        "src/orders/events/handlers/handler06.ts",
+        "src/orders/events/handlers/handler07.ts",
+        "src/orders/events/handlers/handler08.ts",
+        "src/orders/events/handlers/handler09.ts",
+        "src/orders/events/handlers/handler10.ts",
+        "src/orders/events/handlers/handler11.ts",
+        "src/orders/events/handlers/handler12.ts",
+        "src/orders/events/handlers/handler13.ts",
+        "src/orders/events/handlers/handler14.ts",
+        "src/orders/events/handlers/handler15.ts",
+        "src/orders/events/handlers/handler16.ts",
+        "src/orders/events/handlers/handler17.ts",
+        "src/orders/events/handlers/handler18.ts",
+        "src/orders/events/handlers/handler19.ts",
+        "src/orders/events/handlers/handler20.ts",
+        "src/orders/events/handlers/handler21.ts",
+        "src/orders/events/handlers/handler22.ts",
+        "src/orders/projections/proj1.ts",
+        "src/orders/projections/proj2.ts",
+        "src/orders/projections/proj3.ts",
+        "src/orders/projections/proj4.ts",
+        "src/orders/projections/proj5.ts",
+        "src/orders/projections/proj6.ts",
+        "src/orders/projections/proj7.ts",
+        "src/orders/projections/proj8.ts",
+        "src/orders/eventStore.ts",
+        "src/orders/orderService.ts",
+        "src/orders/api.ts",
+        "src/db/migrations/0050_order_events.sql",
+        "src/db/migrations/0051_backfill_order_events.sql",
+        "src/db/migrations/0052_drop_orders_status.sql"
+      ],
+      "additions": 24500,
+      "deletions": 720
+    },
+    {
+      "class": "tests",
+      "files": [
+        "tests/orders/events/handler01.test.ts",
+        "tests/orders/events/handler02.test.ts",
+        "tests/orders/events/handler03.test.ts",
+        "tests/orders/events/handler04.test.ts",
+        "tests/orders/events/handler05.test.ts",
+        "tests/orders/events/handler06.test.ts",
+        "tests/orders/events/handler07.test.ts",
+        "tests/orders/events/handler08.test.ts",
+        "tests/orders/events/handler09.test.ts",
+        "tests/orders/events/handler10.test.ts",
+        "tests/orders/events/handler11.test.ts",
+        "tests/orders/events/handler12.test.ts",
+        "tests/orders/events/handler13.test.ts",
+        "tests/orders/events/handler14.test.ts",
+        "tests/orders/events/handler15.test.ts",
+        "tests/orders/events/handler16.test.ts",
+        "tests/orders/events/handler17.test.ts",
+        "tests/orders/events/handler18.test.ts"
+      ],
+      "additions": 1080,
+      "deletions": 0
+    },
+    {
+      "class": "generated-noise",
+      "files": [
+        "src/generated/orderEvents.pb.ts",
+        "package-lock.json"
+      ],
+      "additions": 19300,
+      "deletions": 300
+    }
+  ],
+  "tests_in_diff": [
+    "tests/orders/events/handler01.test.ts - tests onOrderPlaced handler",
+    "tests/orders/events/handler02.test.ts - tests onOrderPaid handler",
+    "tests/orders/events/handler03.test.ts through handler18.test.ts - tests other handlers"
+  ],
+  "risk_paths": [
+    {
+      "path": "src/orders/eventStore.ts",
+      "why": "New event store implementation; 410 additions, core business logic",
+      "lines_changed": 410
+    },
+    {
+      "path": "src/db/migrations/0050_order_events.sql, 0051_backfill_order_events.sql, 0052_drop_orders_status.sql",
+      "why": "Database schema changes: new table, backfill logic, column drop; affects all order operations",
+      "lines_changed": 204
+    },
+    {
+      "path": "src/orders/events/handlers/handler*.ts (22 handlers)",
+      "why": "Event handler projection functions; core to business logic",
+      "lines_changed": 2640
+    },
+    {
+      "path": "src/orders/projections/proj*.ts (8 projections)",
+      "why": "Projection rebuilding logic; determines order state consistency",
+      "lines_changed": 1440
+    },
+    {
+      "path": "src/orders/orderService.ts",
+      "why": "Service refactoring: 220 additions, 610 deletions; impacts public API",
+      "lines_changed": 830
+    }
+  ],
+  "spot_check_hunks": [
+    {
+      "path": "src/orders/events/handlers/handler01.ts",
+      "start_line": 1,
+      "excerpt": "import type { OrderEvent, OrderProjection } from \"../../types\";\n\n// OrderPlaced → initial projection\nexport function onOrderPlaced(state: OrderProjection | undefined, e: OrderEvent<\"OrderPlaced\">): OrderProjection {\n  return { id: e.orderId, status: \"placed\", items: e.items, total: e.total, version: (state?.version ?? 0) + 1 };\n}"
+    },
+    {
+      "path": "src/orders/events/handlers/handler02.ts",
+      "start_line": 1,
+      "excerpt": "import type { OrderEvent, OrderProjection } from \"../../types\";\n\n// OrderPaid → status paid\nexport function onOrderPaid(state: OrderProjection, e: OrderEvent<\"OrderPaid\">): OrderProjection {\n  if (state.status !== \"placed\") return state;\n  return { ...state, status: \"paid\", paidAt: e.at, version: state.version + 1 };\n}"
+    }
+  ],
+  "claims_vs_diff": [
+    {
+      "claim_or_change": "Author claims: Refactors to event-sourced model",
+      "observation": "PR contains 25k additions for new event store, handlers, projections; 22 handlers + 8 projections match count"
+    },
+    {
+      "claim_or_change": "Author claims: orders.status dropped in favor of projection",
+      "observation": "0052_drop_orders_status.sql present; orderService.ts heavily modified"
+    },
+    {
+      "claim_or_change": "Author claims: Generated protobuf types included",
+      "observation": "src/generated/orderEvents.pb.ts present (18400 lines)"
+    },
+    {
+      "claim_or_change": "Author claims: Unit tests added for every handler",
+      "observation": "18 test files visible in PR; 22 handlers claimed in commits; test file count less than handler count"
+    }
+  ],
+  "recheck": {
+    "new_commits": [],
+    "recheck_excerpts": []
+  },
+  "untrusted_instructions": [],
+  "limits": [
+    "gh pr diff failed (HTTP 406: diff too large, >20k lines)",
+    "Only 3 files retrievable from head: handler01.ts, handler01.test.ts, handler02.ts",
+    "Cannot read full migration files, other handlers, projections, eventStore.ts, orderService.ts",
+    "Cannot read design doc at https://acme.atlassian.net/wiki/ORD-ES (not on GitHub)",
+    "CI workflow details unknown (no workflow file access)",
+    "Branch protection status unknown",
+    "Cannot verify full test coverage across all 22 handlers"
+  ]
+}

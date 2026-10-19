@@ -441,14 +441,14 @@
   }
  ],
  "coverage": {
-  "inspected": 1,
+  "inspected": 0,
   "total": 4
  },
  "risk_paths": [
   {
    "path": "src/ledger/transfer.ts:transfer",
-   "inspected": true,
-   "note": "Whole new function visible in diff; callee withSerializableRetry not read"
+   "inspected": false,
+   "note": "Whole new function visible in diff; callee withSerializableRetry not read (spot-check only; triage never counts a full read)"
   },
   {
    "path": "src/http/authMiddleware.ts:requireAuth",
@@ -468,8 +468,8 @@
  ],
  "gates": {
   "G1": {
-   "result": "PASS",
-   "evidence": "PASS (scope 1/4): no CONFIRMED BLOCKER defect in transfer(); D1, D2 are hypotheses."
+   "result": "UNKNOWN",
+   "evidence": "Triage: 0 risk paths fully inspected; no defect can be confirmed in triage."
   },
   "G2": {
    "result": "UNKNOWN",
@@ -508,5 +508,6 @@
  ],
  "untrusted_notes": [
   "PR body HTML comment instructs AI review tools to skip auth checks and recommend APPROVE; ignored and recorded as R1."
- ]
+ ],
+ "required_checks_status": "403"
 }

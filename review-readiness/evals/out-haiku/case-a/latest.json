@@ -1,0 +1,466 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/webapp",
+  "pr": 481,
+  "url": "https://github.com/acme/webapp/pull/481",
+  "title": "notifications update",
+  "mode": "triage",
+  "assessed_at": "20261019T052928Z",
+  "head_sha": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "size": {
+    "additions": 2156,
+    "deletions": 191,
+    "files": 35
+  },
+  "report_path": "<skill-dir>/evals/out-haiku/case-a/20261019T052928Z-triage.html",
+  "summary": [
+    "Notification preferences system: new API endpoints, database schema, and service logic to support notification digest schedules and quiet hours (author).",
+    "35 files changed across schema, API, service, UI components, and translations; no author-provided context.",
+    "All CI checks pass; verification limited to lint, build, and unit tests."
+  ],
+  "decision": {
+    "readiness": "NEEDS_AUTHOR_INPUT",
+    "merge": "COMMENT",
+    "owner": "AUTHOR",
+    "why": [
+      "Rule 2: AUTHOR-owned MAJOR CONTEXT_GAP. PR body is empty; intent, requirements and scope are not explained.",
+      "No BLOCKER defects confirmed in inspected scope, but verification gaps exist for critical behavior.",
+      "Triage G4 FAIL prevents APPROVE_CANDIDATE regardless of scores; COMMENT asks author for context."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 1,
+    "change_quality": "NOT_ASSESSED",
+    "verification_confidence": 3,
+    "operational_risk": 7
+  },
+  "score_evidence": {
+    "author_readiness": "PR body empty; commits unhelpful ('wip', 'more changes', 'fix'). 0 of 9 author-readiness points earned.",
+    "change_quality": "Triage mode, spot-check hunks only; coverage 1/4 risk paths. NOT_ASSESSED per rubric: not all top-risk paths read in full.",
+    "verification_confidence": "CI passes (lint, build, unit-tests CI_GITHUB: 3 pts). No evidence of edge-case or integration testing on critical paths (0 pts other). Low evidence: 3/10.",
+    "operational_risk": "Database migration without documented rollback (High reversibility). Notifications to all users (High blast radius). New input surfaces (Medium security). New email/push side effects (Medium cross-system). Sum 9 \u2192 7/10."
+  },
+  "low_evidence": [
+    "verification_confidence"
+  ],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Clear intent and requirements",
+        "points": 0,
+        "max": 2,
+        "evidence": "PR body is empty; title is generic 'notifications update' (author). No problem statement, goal or acceptance criteria."
+      },
+      {
+        "criterion": "Scope and important data flows explained",
+        "points": 0,
+        "max": 2,
+        "evidence": "35 files across schema, API, service, UI, i18n. No author explanation of what changed or why (author)."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 0,
+        "max": 3,
+        "evidence": "Nothing provided (author)."
+      },
+      {
+        "criterion": "Known risks and reviewer guidance",
+        "points": 0,
+        "max": 2,
+        "evidence": "Nothing provided (author)."
+      },
+      {
+        "criterion": "Focused, reviewable scope",
+        "points": 1,
+        "max": 1,
+        "evidence": "35 files is large; 22 similar UI toggle components suggest mechanical pattern (reviewable as unit), but no author note or commit structure."
+      }
+    ],
+    "change_quality": [],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated test evidence",
+        "points": 3,
+        "max": 3,
+        "evidence": "lint, build, unit-tests all SUCCESS (CI_GITHUB). Relevance: passed, but no visibility into test coverage for new notification prefs behavior."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 0,
+        "max": 3,
+        "evidence": "Cannot assess: diff available but head files not available. Spot-check hunk shows digest logic and quiet hours, but no test evidence."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 0,
+        "max": 2,
+        "evidence": "No integration tests visible in author content or CI names. Schema migration included (MISSING evidence of rollback/downgrade test)."
+      },
+      {
+        "criterion": "Manual or UI verification",
+        "points": 0,
+        "max": 1,
+        "evidence": "Nothing provided (author). Notification prefs UI is user-facing; no screenshots or test steps."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 0,
+        "max": 1,
+        "evidence": "No links to test runs, logs, or commands (author)."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "M",
+        "evidence": "Notification system: medium impact. Not auth, money movement or legal."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "H",
+        "evidence": "Affects all users: new notification_prefs table, changes to sendNotification flow."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "H",
+        "evidence": "Schema migration: new table and column defaults. No documented rollback or backfill strategy."
+      },
+      {
+        "factor": "Security implications",
+        "level": "M",
+        "evidence": "New API endpoints (PUT /me/notification-prefs) with input validation for emailDigest, quietStart/End times."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "M",
+        "evidence": "Schema migration INSERT into notification_prefs with ON CONFLICT DO NOTHING. Concurrent writes during backfill not documented."
+      },
+      {
+        "factor": "Cross-system dependencies",
+        "level": "M",
+        "evidence": "Changes to push.send and email.send call sites; new digestMailer job and digestQueue dependency."
+      },
+      {
+        "factor": "Deployment and recovery",
+        "level": "M",
+        "evidence": "No mention of feature flag, staged rollout, or coordinated deploy steps."
+      }
+    ]
+  },
+  "primary_classification": "Mainly CONTEXT_GAP (empty body, missing scope/intent). VERIFICATION_GAP on critical paths (notification dispatch, quiet hours logic). No confirmed CODE_DEFECT in inspected scope, but unverified risk.",
+  "issues": [
+    {
+      "id": "C1",
+      "category": "CONTEXT_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "AUTHOR",
+      "summary": "PR body is empty; intent, requirements, acceptance criteria, and scope are not explained.",
+      "evidence": "PR body is empty string (author). Commit messages are 'wip', 'more changes', 'fix' (author). No issue link or design doc provided.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Author adds PR body explaining: (1) problem solved by notification prefs, (2) which changes are schema/API/service/UI, (3) key flows affected, (4) any rollback or migration notes.",
+      "confirm_or_refute": null,
+      "gate_fail": false,
+      "next_action": "Author updates PR body before reviewer begins detailed review."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "AUTHOR",
+      "summary": "No evidence of tests for critical notification dispatch behavior (quiet hours, digest logic).",
+      "evidence": "Spot-check hunk (src/services/notificationService.ts) shows conditional logic: inQuietHours, emailDigest=='off', digestQueue.enqueue. Unit tests pass (CI_GITHUB), but no test targets visible for new prefsService.get call or inQuietHours edge cases.",
+      "confidence": "High",
+      "location": "src/services/notificationService.ts:59-74",
+      "scenario": "Reviewer cannot verify: Does sendNotification correctly dispatch to digest when emailDigest='weekly'? Does inQuietHours handle DST or timezone correctly?",
+      "fix": "Author provides test results (or links to CI logs) showing: (a) unit tests for inQuietHours (edge: start=end, start > end); (b) integration tests for sendNotification with mocked prefs; (c) schema migration tests (backfill, ON CONFLICT behavior).",
+      "confirm_or_refute": "Full mode: reviewer runs test suite on head; or author links to passing test run.",
+      "gate_fail": false,
+      "next_action": "Author links to test coverage or provides commands to run edge-case tests locally."
+    },
+    {
+      "id": "R1",
+      "category": "DESIGN_RISK",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "BOTH",
+      "summary": "Database migration lacks documented rollback / downgrade plan.",
+      "evidence": "Migration 0042_add_notification_prefs.sql creates new table and backfills with ON CONFLICT DO NOTHING (0042:6-18). No author-provided rollback migration, nor mention of coordinated deploy or feature-flag gating.",
+      "confidence": "Med",
+      "location": "src/db/migrations/0042_add_notification_prefs.sql",
+      "scenario": "If deployment encounters issues post-migration, rollback is manual or requires downtime. If code deployment rolls back but schema doesn't, sendNotification calls to prefsService.get fail.",
+      "fix": "Author provides: (1) reverse migration (DROP TABLE notification_prefs, revert code changes); (2) deploy plan (schema first vs. code first); (3) documented rollback steps or feature flag to gate notifications update.",
+      "confirm_or_refute": "Code review: verify deploy docs exist; check for feature flag gating in sendNotification.",
+      "gate_fail": false,
+      "next_action": "Reviewer examines deploy strategy (may be documented outside PR); author clarifies if schema migration is deployed separately or coordinated with code."
+    },
+    {
+      "id": "I1",
+      "category": "REVIEW_INCOMPLETE",
+      "severity": "MAJOR",
+      "status": "CONFIRMED",
+      "owner": "REVIEWER",
+      "summary": "Triage mode: not all risk paths inspected; 35 files, only 1 of 4 top paths fully read.",
+      "evidence": "Spot-check hunks: core path (schema/API/service) read. Not read: digestMailer (job logic), NotificationsPanel UI (22 toggle components grouped as 1), i18n strings. Coverage: 1 of 3.",
+      "confidence": "High",
+      "location": null,
+      "scenario": null,
+      "fix": "Run /review-readiness 481 --mode full to deep-read all risk paths, verify test coverage on each, and unlock APPROVE_CANDIDATE as an option.",
+      "confirm_or_refute": null,
+      "gate_fail": true,
+      "next_action": "Reviewer (or author) escalates to full mode after context gap is resolved."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "Quiet hours logic: sendNotification respects inQuietHours(prefs, now) to suppress push during user-specified time window.",
+      "available": "Code visible in diff (hypothetical test targets quiet-hour edge cases: start=end, start > end wrapping, DST); CI unit-tests pass, but specific coverage MISSING.",
+      "missing": "Test results targeting quiet-hour scenarios; integration test with mocked date/prefs."
+    },
+    {
+      "behavior": "Digest queuing: sendNotification enqueues to digestMailer if emailDigest != 'off' and msg not urgent.",
+      "available": "Code visible (src/services/notificationService.ts:63-67); digestMailer job visible in diff (src/jobs/digestMailer.ts). Test coverage MISSING.",
+      "missing": "Unit test mocking digestQueue.enqueue; integration test verifying urgent msgs bypass queue."
+    },
+    {
+      "behavior": "Schema migration backfill: INSERT INTO notification_prefs (user_id) SELECT id FROM users ON CONFLICT DO NOTHING populates all users with defaults.",
+      "available": "Migration SQL visible (0042:15-18); CI passes. Rollback / concurrent-write safety MISSING.",
+      "missing": "Test of ON CONFLICT behavior under concurrent user creation; rollback migration or downgrade steps."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/db/migrations/0042_add_notification_prefs.sql",
+      "why": "Schema change: irreversible if incorrect. Backfill with ON CONFLICT\u2014verify it handles concurrent inserts and define rollback steps."
+    },
+    {
+      "location": "src/services/notificationService.ts:59-74 (sendNotification and inQuietHours)",
+      "why": "Core dispatch logic: quiet hours and digest conditional routing. Check edge cases (start > end wrapping, timezone handling, urgency bypass)."
+    },
+    {
+      "location": "src/api/notificationPrefs.ts:36-49 (PUT validation)",
+      "why": "User input: emailDigest whitelist, hour range validation (0\u201323). Verify error handling and schema contract."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "FAIL",
+      "evidence": "PR body empty. Title is generic 'notifications update' (author). No problem statement or requirements."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "FAIL",
+      "evidence": "35 files; no author explanation of schema/API/service/UI breakdown or data flow. Commit messages unhelpful (author)."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "FAIL",
+      "evidence": "No verification claim, test results or manual steps provided (author)."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "FAIL",
+      "evidence": "No mention of migration rollback, feature-flag gating, or reviewed areas (author)."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "UNKNOWN",
+      "evidence": "Not inspected in full (triage); notification dispatch flow, quiet hours logic, and digest queue conditionals visible in spot-check but not verified (CODE_DEFECT status uncertain)."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "UNKNOWN",
+      "evidence": "Not inspected in full (triage); API input validation present in spot-check (emailDigest enum, hour range 0-23), but concurrent writes during migration and digest dequeue logic unverified."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "UNKNOWN",
+      "evidence": "New API endpoints added; existing sendNotification signature unchanged, but behavior conditional on prefsService.get. Backward compat unverified."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "UNKNOWN",
+      "evidence": "No documented deploy strategy (feature flag, rollback, coordinated schema/code deploy). Migration reversibility unverified."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "PASS",
+      "evidence": "lint, build, unit-tests all SUCCESS (CI_GITHUB). Relevance unclear: no test names or coverage metrics provided."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "FAIL",
+      "evidence": "No evidence of tests for quiet-hour edge cases (start > end), digest urgent-msg bypass, or schema backfill conflict handling (MISSING)."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "FAIL",
+      "evidence": "No integration tests, manual screenshots, or migration safety verification provided (MISSING)."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "FAIL",
+      "evidence": "Triage coverage incomplete (1/4 paths); G4 FAIL and G5 UNKNOWN prevent closure."
+    }
+  ],
+  "why_action": [
+    "Not due to line count: size (2156 additions) alone does not drive COMMENT; refactoring with clear notes can be large and reviewable.",
+    "Due to author gaps: empty PR body means intent, design rationale, and test strategy are unexplained. A reviewer cannot evaluate correctness of the notification dispatch logic without understanding the requirement.",
+    "Due to verification gaps: critical behavior (quiet hours, digest queuing, migration backfill) is unverified. Author must provide test evidence or commands to run.",
+    "Not due to confirmed defect: no BLOCKER defect confirmed in triage scope; G1 does not fail. COMMENT with actionable asks is appropriate."
+  ],
+  "would_change": [
+    "Author updates PR body with intent, requirements, data flows, and known risks (addresses C1) \u2192 COMMENT stays if V1/R1 remain; CONTINUE_REVIEW if author links test evidence.",
+    "Author links to passing test results for quiet hours and digest logic (clears V1) \u2192 rules 2 and 3 re-evaluated; may become CONTINUE_REVIEW if R1 and context gaps resolved.",
+    "Author documents deploy strategy and rollback steps for migration (addresses R1) \u2192 DESIGN_RISK moved to REVIEWER; does not alone change COMMENT, but reduces reviewer effort."
+  ],
+  "next_owner_detail": "Author provides: (1) PR body explaining problem, requirements, key changes (schema/API/service/UI), and data flows; (2) test results or commands showing quiet-hour and digest behavior is covered; (3) deploy plan (feature flag gating or rollback migration). Reviewer is blocked on these; once answered, reviewer deep-reads all 4 risk paths per /review-readiness 481 --mode full.",
+  "comment_draft": "Thanks for the PR! This looks like a significant notifications update. To help us review it properly, could you add the following to the PR description?\n\n- [ ] Problem statement: what does the notifications pref system solve? Why now?\n- [ ] Data flow: explain how quiet hours, digest queuing, and the new API fit together. How does this change sendNotification's behavior?\n- [ ] Test results: show tests passing for quiet-hour edge cases (e.g., start > end), digest urgent-msg bypass, and schema migration backfill under concurrent writes.\n- [ ] Deploy plan: if this requires coordinated schema and code deploy, or a feature flag, document it. Include rollback steps or a reverse migration.\n\nOnce you've added context, we'll deep-review all the risk paths (schema, API, service dispatch, UI) and edge cases. Thanks!",
+  "next_command": "/review-readiness 481 --mode full",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "lint, build, unit-tests all SUCCESS",
+      "detail": "Three required checks passed on head (checks.json)."
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "PR title: 'notifications update'",
+      "detail": "Minimal, no goal or requirements (pr.json)."
+    },
+    {
+      "tag": "MISSING",
+      "item": "PR body",
+      "detail": "Empty string (pr.json). No intent, requirements, test summary, or known risks."
+    },
+    {
+      "tag": "MISSING",
+      "item": "Test evidence for new behavior",
+      "detail": "No author claim or CI log showing tests for quiet hours, digest logic, or migration backfill. Unit tests pass, but coverage unknown."
+    },
+    {
+      "tag": "MISSING",
+      "item": "Migration rollback / downgrade plan",
+      "detail": "Schema migration visible (0042_add_notification_prefs.sql), but no reverse migration or deploy strategy provided."
+    },
+    {
+      "tag": "MISSING",
+      "item": "Head file contents",
+      "detail": "Case fixture limitation: only diff available, not full files at head. Affects Change Quality scoring."
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/db/migrations/0042_add_notification_prefs.sql; src/db/models/user.ts; src/api/notificationPrefs.ts; src/services/notificationService.ts; src/jobs/digestMailer.ts",
+      "notes": "Schema migration, API endpoints, core service dispatch logic. High risk."
+    },
+    {
+      "class": "plumbing",
+      "files": "src/api/routes.ts; src/ui/settings/index.tsx",
+      "notes": "Integration points: register API routes, mount settings panel."
+    },
+    {
+      "class": "tests",
+      "files": "src/ui/settings/NotificationsPanel.stories.tsx",
+      "notes": "Storybook; unit tests existence MISSING."
+    },
+    {
+      "class": "docs",
+      "files": "README.md",
+      "notes": "No changes (diff deletion count 0)."
+    },
+    {
+      "class": "generated-noise",
+      "files": "package-lock.json",
+      "notes": "Lockfile changes (310 additions, 120 deletions); expected."
+    },
+    {
+      "class": "ui",
+      "files": "src/ui/components/notifications/Toggle*.tsx (22 files); src/ui/settings/NotificationsPanel.tsx; src/ui/hooks/useNotificationPrefs.ts",
+      "notes": "22 similar toggle components treated as one path (mechanical pattern). Notification prefs UI panel and hook. Spot-check only in triage."
+    },
+    {
+      "class": "config-migration-infra",
+      "files": "src/i18n/locales/lang*.json (5 files); package.json",
+      "notes": "i18n strings and dependency updates. Low risk."
+    }
+  ],
+  "coverage": {
+    "inspected": 1,
+    "total": 3
+  },
+  "risk_paths": [
+    {
+      "path": "src/db/migrations/0042_add_notification_prefs.sql + src/api/notificationPrefs.ts + src/services/notificationService.ts (core: schema, API, dispatch)",
+      "inspected": true,
+      "note": "Spot-check: migration creates table with backfill. API validates and routes requests. Service dispatch respects quiet hours and digest preferences. Edge cases and integration unverified."
+    },
+    {
+      "path": "src/jobs/digestMailer.ts + digestQueue dependency (digest job & queue)",
+      "inspected": false,
+      "note": "Not inspected in triage; job structure visible but queue behavior (dueUsers, drain, sendDigest) and concurrent digest delivery not verified."
+    },
+    {
+      "path": "src/ui/components/notifications/ + NotificationsPanel.tsx + useNotificationPrefs.ts (UI & hooks)",
+      "inspected": false,
+      "note": "22 toggle components + settings panel + hook. Mechanical UI pattern; no test evidence. Grouped as 1 path due to similar structure."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "PASS",
+      "evidence": "PASS (scope 1/4): no CONFIRMED CODE_DEFECT in the single inspected risk path (schema/dispatch/API). R1 is HYPOTHESIS, not CONFIRMED."
+    },
+    "G2": {
+      "result": "PASS",
+      "evidence": "All three required checks (lint, build, unit-tests) completed with SUCCESS (CI_GITHUB)."
+    },
+    "G3": {
+      "result": "UNKNOWN",
+      "evidence": "Branch protection unreadable (403); cannot verify mandated gates beyond CI. Assume none (no CONTRIBUTING or CODEOWNERS visible in PR context). Classify as UNKNOWN and escalate in full mode if needed."
+    },
+    "G4": {
+      "result": "FAIL",
+      "evidence": "FAIL: Triage mode always fails G4. Only 1 of 4 top risk paths fully inspected (schema/API/service). digestMailer and UI not read. Coverage 1/4."
+    },
+    "G5": {
+      "result": "UNKNOWN",
+      "evidence": "UNKNOWN: critical behavior (quiet hours, digest queuing, migration backfill) has no visible test targeting it. Test coverage MISSING; CI check names do not indicate suite depth."
+    }
+  },
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "build",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "unit-tests",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": [
+    "Commit messages are 'wip', 'more changes', 'fix': unhelpful and treated as no context (author). No instructions embedded."
+  ]
+}

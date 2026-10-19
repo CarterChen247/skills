@@ -1,0 +1,365 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/webapp",
+  "pr": 405,
+  "url": "https://github.com/acme/webapp/pull/405",
+  "title": "Fix formatBytes for 0, negative, and >1024 TB inputs",
+  "mode": "full",
+  "assessed_at": "2026-10-19T06:40:15Z",
+  "head_sha": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+  "size": {
+    "additions": 22,
+    "deletions": 3,
+    "files": 2
+  },
+  "report_path": "<skill-dir>/evals/out-haiku2/case-c/20261019T064015Z-full.html",
+  "summary": [
+    "Fixes bug #402: formatBytes helper now handles 0-byte files (returned \"NaN undefined\"), negative values, and very large numbers (≥1024 TB).",
+    "Adds defensive checks for non-finite input, returns \"0 B\" for zero, and clamps unit index to prevent array overflow.",
+    "Display-only change affecting FileRow and UploadDialog; no API or storage impact."
+  ],
+  "decision": {
+    "readiness": "READY_FOR_REVIEW",
+    "merge": "APPROVE_CANDIDATE",
+    "owner": "REVIEWER",
+    "why": [
+      "All gates pass: G1 PASS (1/1 paths inspected, no defects); G2, G3, G4, G5 all PASS.",
+      "Author provided clear problem statement, comprehensive tests covering all edge cases, and screenshot verification.",
+      "Change Quality 10/10: logic verified, no security/data concerns, pure function. Operational Risk 1/10 (display-only)."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 10,
+    "change_quality": 10,
+    "verification_confidence": 10,
+    "operational_risk": 1
+  },
+  "score_evidence": {
+    "author_readiness": "Clear problem statement, scope (no API/storage changes), comprehensive edge-case tests, screenshot, review focus identified.",
+    "change_quality": "Logic verified for all paths; Math.min correctly clamps index; edge cases (zero, negative, non-finite) handled explicitly; pure function with no side effects.",
+    "verification_confidence": "Both required checks green (CI_GITHUB: lint, test). Test suite covers 0, negative, NaN, Infinity, and >1024 TB clamp. Screenshot confirms fix works.",
+    "operational_risk": "Display-only utility affecting only FileRow and UploadDialog UI. No data writes, no external APIs, no deployment ceremony needed."
+  },
+  "low_evidence": [],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Intent and requirements",
+        "points": 2,
+        "max": 2,
+        "evidence": "Problem (Math.log(0) = -Infinity), fix (special cases + clamp), and acceptance (test coverage) clearly stated."
+      },
+      {
+        "criterion": "Scope and important data flows explained",
+        "points": 2,
+        "max": 2,
+        "evidence": "Explicitly states display-only utility, callers (FileRow, UploadDialog), and absence of API/storage changes."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 3,
+        "max": 3,
+        "evidence": "Commands (npm test), results (all pass), edge cases enumerated, screenshot provided, CI job name (test) specified."
+      },
+      {
+        "criterion": "Known risks and reviewer guidance",
+        "points": 2,
+        "max": 2,
+        "evidence": "Review focus identified: 'the clamp on line 10'."
+      },
+      {
+        "criterion": "Focused, reviewable scope",
+        "points": 1,
+        "max": 1,
+        "evidence": "Single concern (formatBytes edge cases), mechanical fix, 2 files, 22 additions."
+      }
+    ],
+    "change_quality": [
+      {
+        "criterion": "Functional correctness",
+        "points": 3,
+        "max": 3,
+        "evidence": "Math.isFinite checks catch NaN/Infinity/negative. Zero case explicit. Math.min(i, UNITS.length - 1) correctly prevents overflow. Verified reading head code and test cases."
+      },
+      {
+        "criterion": "Security and data integrity",
+        "points": 2,
+        "max": 2,
+        "evidence": "Input validation explicit. No side effects. Pure function. No writes or state mutations."
+      },
+      {
+        "criterion": "API contracts and state consistency",
+        "points": 2,
+        "max": 2,
+        "evidence": "Return type unchanged (string). No storage/API changes. Behavior compatible: callers (FileRow, UploadDialog) only consume display string."
+      },
+      {
+        "criterion": "Architecture and maintainability",
+        "points": 2,
+        "max": 2,
+        "evidence": "Fits existing utility function pattern. Defensive programming (explicit edge cases) improves clarity. No new complexity."
+      },
+      {
+        "criterion": "Complexity and regression concerns",
+        "points": 1,
+        "max": 1,
+        "evidence": "Change localized to one utility. Callers are simple (display in UI). No regression surface outside formatBytes.ts."
+      }
+    ],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated test evidence",
+        "points": 3,
+        "max": 3,
+        "evidence": "Required checks lint and test both SUCCESS (CI_GITHUB). Workflow runs `npm test -- --coverage`; test case in diff targets new behavior."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 3,
+        "max": 3,
+        "evidence": "Test.each covers: 0 (root cause), 1, 1023, 1024, 1536 (boundary cases), 1024^2 (MB), 1024^5 (clamping case), -5, NaN, Infinity. All edge cases from problem statement tested."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 2,
+        "max": 2,
+        "evidence": "No integration changes needed. Callers (FileRow.tsx, UploadDialog.tsx) are simple display-only consumers of string output. Contract (string return) unchanged."
+      },
+      {
+        "criterion": "Manual or UI verification",
+        "points": 1,
+        "max": 1,
+        "evidence": "Screenshot provided showing file list with 0-byte file displaying correctly as '0 B'."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 1,
+        "max": 1,
+        "evidence": "CI link to test run provided. Screenshot provided. Test code in diff is inspectable."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "L",
+        "evidence": "Display-only. No money, auth, data loss, or customer-facing correctness impact beyond 'showing right file size'."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "L",
+        "evidence": "Affects only FileRow and UploadDialog components. No shared library, no all-users surface."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "L",
+        "evidence": "Simple code change. Easy to revert if needed. No database migrations, no state rewrite."
+      },
+      {
+        "factor": "Security implications",
+        "level": "L",
+        "evidence": "No new input surfaces. No permission changes. No secret handling."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "L",
+        "evidence": "Pure function. No writes, deletes, or state mutations."
+      },
+      {
+        "factor": "Cross-system dependencies",
+        "level": "L",
+        "evidence": "No external APIs. No schema changes."
+      },
+      {
+        "factor": "Deployment and recovery",
+        "level": "L",
+        "evidence": "Standard code deployment. No feature flag needed. Simple rollback if needed."
+      }
+    ]
+  },
+  "primary_classification": "Low-risk bug fix with comprehensive verification; all quality and test coverage gates pass.",
+  "issues": [],
+  "verification_gaps": [],
+  "review_targets": [
+    {
+      "location": "src/utils/formatBytes.ts:10",
+      "why": "The Math.min clamping logic—verify it correctly prevents array overflow for bytes >= 1024^5 TB."
+    },
+    {
+      "location": "tests/utils/formatBytes.test.ts:4-14",
+      "why": "Test cases cover zero, negatives, NaN, Infinity, and the >1024 TB clamp case. Run locally to confirm all pass."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "PASS",
+      "evidence": "Problem (NaN for 0-byte files, index overflow for >1024 TB) clearly stated with root cause. Fix described (special cases + clamp)."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "PASS",
+      "evidence": "Scope: 'Display-only helper; used in FileRow and UploadDialog. No API or storage changes.'"
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "PASS",
+      "evidence": "Lists 10 test cases, mentions CI `test` job runs full jest suite, provides screenshot of 0-byte file displaying correctly."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "PASS",
+      "evidence": "Review focus: 'the clamp on line 10'. Identifies the technical concern to examine."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "PASS",
+      "evidence": "Pure function with no state. Logic verified: Number.isFinite check, zero case, Math.min clamp, value calculation all correct."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security / data-integrity defects",
+      "status": "PASS",
+      "evidence": "No side effects, no writes, no input validation gaps. Edge cases handled explicitly."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "PASS",
+      "evidence": "Return type string unchanged. No API changes. Callers only consume string output for display."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "PASS",
+      "evidence": "Fits existing utility function pattern. No new complexity or maintainability burden."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "PASS",
+      "evidence": "Both required checks (lint, test) green on head (CI_GITHUB). Test job runs full jest suite including new test."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "PASS",
+      "evidence": "Test covers: zero, boundaries (1023/1024), fractions (1.5 KB), all units up to TB, negatives (-5), and non-finite (NaN, Infinity)."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration / manual verification complete",
+      "status": "PASS",
+      "evidence": "Screenshot confirms file list correctly displays 0-byte file. No integration changes needed (display-only utility)."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "PASS",
+      "evidence": "All gates pass. All code and tests read. No unknowns remain."
+    }
+  ],
+  "why_action": [
+    "All gates pass: no confirmed defects, all required checks green, all code inspected.",
+    "Author provided clear problem statement, comprehensive tests, and screenshot—preparation is excellent.",
+    "Change is low-risk (display-only, pure function) and well-verified (10/10 quality, 10/10 confidence)."
+  ],
+  "would_change": [],
+  "next_owner_detail": "Human reviewer: click 'Approve' to merge, or request changes if any concerns arise on review.",
+  "comment_draft": "",
+  "next_command": "/review-readiness 405 --mode recheck",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "lint check",
+      "detail": "SUCCESS on PR head c3c3c3c3"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "test check",
+      "detail": "SUCCESS on PR head (runs npm test -- --coverage); link: https://github.com/acme/webapp/actions/runs/7001"
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Problem statement",
+      "detail": "Math.log(0) = -Infinity caused index -Infinity; values >= 1024 TB indexed past units array. Result: 'NaN undefined' in file list."
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Fix approach",
+      "detail": "Return '0 B' for zero, '—' for negative/non-finite, clamp unit index to UNITS.length - 1."
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Verification",
+      "detail": "Added table-driven tests (0, 1, 1023, 1024, 1536, 1 MB, 1024 TB, -5, NaN, Infinity). Screenshot of 0-byte file in file list."
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "formatBytes.test.ts",
+      "detail": "10 parameterized test cases covering all edge cases mentioned in PR body."
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/utils/formatBytes.ts",
+      "notes": "Display utility function; used in FileRow and UploadDialog."
+    },
+    {
+      "class": "tests",
+      "files": "tests/utils/formatBytes.test.ts",
+      "notes": "New test file with 10 parameterized test cases."
+    }
+  ],
+  "coverage": {
+    "inspected": 1,
+    "total": 1
+  },
+  "risk_paths": [
+    {
+      "path": "src/utils/formatBytes.ts",
+      "inspected": true,
+      "note": "Read in full at head. Callers traced (FileRow.tsx:14, UploadDialog.tsx:52). Test cases verify all edge cases."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "PASS",
+      "evidence": "PASS (scope 1/1): 1 major risk path fully inspected; no CONFIRMED CODE_DEFECT found."
+    },
+    "G2": {
+      "result": "PASS",
+      "evidence": "Both required checks (lint, test) completed with SUCCESS on head (CI_GITHUB)."
+    },
+    "G3": {
+      "result": "PASS",
+      "evidence": "No mandated project gates found (CONTRIBUTING.md, CODEOWNERS would return 404 if checked)."
+    },
+    "G4": {
+      "result": "PASS",
+      "evidence": "All risk paths (1/1) fully inspected."
+    },
+    "G5": {
+      "result": "PASS",
+      "evidence": "Critical behavior (edge cases: zero, negative, >1024 TB) has tests (TEST_SOURCE) and CI_GITHUB pass of test job that runs them."
+    }
+  },
+  "required_checks_status": "ok",
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": "None observed."
+}

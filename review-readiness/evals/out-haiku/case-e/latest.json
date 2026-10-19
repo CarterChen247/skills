@@ -1,0 +1,521 @@
+{
+  "schema": "review-readiness/v2",
+  "repo": "acme/shop",
+  "pr": 890,
+  "url": "https://github.com/acme/shop/pull/890",
+  "title": "Event-sourced order pipeline",
+  "mode": "full",
+  "assessed_at": "2026-10-19T12:00:00Z",
+  "head_sha": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+  "size": {
+    "additions": 25389,
+    "deletions": 1520,
+    "files": 56
+  },
+  "report_path": "<skill-dir>/evals/out-haiku/case-e/20261019T120000Z-full.html",
+  "summary": [
+    "Refactors order pipeline to event-sourced model using event store and projections (author).",
+    "Orders derived from `order_events` table; `orders.status` column dropped (author).",
+    "25k additions across 56 files: 22 event handlers, 8 projections, 3 migrations, generated protobuf (author)."
+  ],
+  "decision": {
+    "readiness": "NEEDS_AUTHOR_INPUT",
+    "merge": "COMMENT",
+    "owner": "AUTHOR",
+    "why": [
+      "Rule 2: Author-owned MAJOR CONTEXT_GAP (C1 design doc unreadable) and VERIFICATION_GAP (V1 test count discrepancy).",
+      "No confirmed defect; all visible checks green. Reviewer work also needed (I1: most files unreadable due to diff size)."
+    ]
+  },
+  "delta": null,
+  "scores": {
+    "author_readiness": 4,
+    "change_quality": "NOT_ASSESSED",
+    "verification_confidence": 2,
+    "operational_risk": 8
+  },
+  "score_evidence": {
+    "author_readiness": "Design doc link not accessible (half credit); intent explained but verification summary minimal; scope focused but large.",
+    "change_quality": "NOT_ASSESSED: not all high-risk paths inspected; only 2 of 56 files fully readable (diff size limit). Spot-check findings are hypotheses, not defects.",
+    "verification_confidence": "Test check green (CI_GITHUB) but coverage unclear (18 of 22 handler tests visible). CI relevance unknown. Low evidence (40%+).",
+    "operational_risk": "High (2): money movement, all orders affected; high (2): irreversible migration (column drop); high (2): data rewrite with backfill; high (2): version consistency unclear. Sum 8/14 → 8/10."
+  },
+  "low_evidence": [
+    "verification_confidence"
+  ],
+  "score_breakdown": {
+    "author_readiness": [
+      {
+        "criterion": "Intent and requirements",
+        "points": 1,
+        "max": 2,
+        "evidence": "Event-sourced model explained; design doc linked but not accessible via GitHub (half credit for unreadable external link)."
+      },
+      {
+        "criterion": "Scope and important data flows explained",
+        "points": 1,
+        "max": 2,
+        "evidence": "States that orders are derived from events and status column dropped; callers/projections/migration impact not detailed."
+      },
+      {
+        "criterion": "Verification summary",
+        "points": 1,
+        "max": 3,
+        "evidence": "Author claims 'Unit tests added for every handler' with no detail. No commands, results, or links (AUTHOR_REPORTED)."
+      },
+      {
+        "criterion": "Known risks and reviewer guidance",
+        "points": 0,
+        "max": 2,
+        "evidence": "No mention of migration risks, rollback plan, or review focus areas."
+      },
+      {
+        "criterion": "Focused, reviewable scope",
+        "points": 1,
+        "max": 1,
+        "evidence": "25k additions, 56 files, but focused on single concern: order pipeline refactoring with clear commit structure."
+      }
+    ],
+    "change_quality": [],
+    "verification_confidence": [
+      {
+        "criterion": "CI and automated tests",
+        "points": 1,
+        "max": 3,
+        "evidence": "Test check SUCCESS (CI_GITHUB), but workflow details not accessible; cannot verify it runs relevant handlers."
+      },
+      {
+        "criterion": "Critical behavior and edge-case coverage",
+        "points": 0,
+        "max": 3,
+        "evidence": "18 test files visible for 22 handlers; 4 handlers may lack tests (unconfirmed). Cannot read handler02+ tests."
+      },
+      {
+        "criterion": "Integration and contract validation",
+        "points": 0,
+        "max": 2,
+        "evidence": "Migrations present (3 files) but not readable. No integration test evidence observed."
+      },
+      {
+        "criterion": "Manual or UI verification",
+        "points": 0,
+        "max": 1,
+        "evidence": "None provided. Not applicable for internal order service but would strengthen confidence."
+      },
+      {
+        "criterion": "Evidence traceability",
+        "points": 1,
+        "max": 1,
+        "evidence": "CI check results available; no linked test runs, logs, or commands provided by author."
+      }
+    ],
+    "operational_risk": [
+      {
+        "factor": "Impact severity",
+        "level": "H",
+        "evidence": "Money movement (order payment states); all order operations affected."
+      },
+      {
+        "factor": "Blast radius",
+        "level": "H",
+        "evidence": "Core order service; impacts all users and orders in system."
+      },
+      {
+        "factor": "Reversibility",
+        "level": "H",
+        "evidence": "Irreversible migration: DROP orders.status column; backfill of order_events table required."
+      },
+      {
+        "factor": "Data integrity",
+        "level": "H",
+        "evidence": "Version field in projections incremented per event; out-of-order replay or duplicates could corrupt state."
+      },
+      {
+        "factor": "Deployment and recovery",
+        "level": "H",
+        "evidence": "Column drop requires coordinated migration; rollback would require schema reversion and replay."
+      },
+      {
+        "factor": "Security implications",
+        "level": "L",
+        "evidence": "No new auth or secret handling observed in readable handlers."
+      },
+      {
+        "factor": "Cross-system dependencies",
+        "level": "M",
+        "evidence": "orderService.ts heavily modified (220 add, 610 del); public API changes unclear (not readable)."
+      }
+    ]
+  },
+  "primary_classification": "CONTEXT_GAP (unreadable design doc) + VERIFICATION_GAP (test count discrepancy) + REVIEW_INCOMPLETE (not all files readable). No confirmed code defect.",
+  "issues": [
+    {
+      "id": "C1",
+      "category": "CONTEXT_GAP",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "AUTHOR",
+      "summary": "Design doc link is not accessible via GitHub; intent partially inferred from PR body.",
+      "evidence": "PR body links https://acme.atlassian.net/wiki/ORD-ES (AUTHOR_REPORTED; not accessible in fixture). Event-sourced model and status-column drop mentioned, but architectural decisions and migration rationale not in PR.",
+      "confidence": "High",
+      "location": "PR body, design doc link",
+      "scenario": "Reviewer unfamiliar with event sourcing must reverse-engineer intent from code rather than reading design rationale.",
+      "fix": "Author provides inline design summary in PR body (2–3 bullet points: current order pipeline, event-sourced goal, key benefits) or confirms design doc is readable.",
+      "confirm_or_refute": "Author supplies design summary in PR comment or confirms external doc is accessible.",
+      "gate_fail": false,
+      "next_action": "Author provides inline design summary or verifies wiki link is accessible to reviewers."
+    },
+    {
+      "id": "V1",
+      "category": "VERIFICATION_GAP",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "AUTHOR",
+      "summary": "Author claims 'Unit tests added for every handler', but only 18 test files are visible for 22 handlers.",
+      "evidence": "PR shows 22 handler files (handler01–handler22) in file list. Test files visible: handler01–handler18 (18 files). Count mismatch suggests 4 handlers may lack tests (TEST_SOURCE: files listed in PR metadata; claim is AUTHOR_REPORTED).",
+      "confidence": "High",
+      "location": "PR file list and author claim in PR body",
+      "scenario": "Handlers 19–22 may not be unit tested, leaving critical order logic unverified before merge.",
+      "fix": "Author confirms which handlers have tests and uploads test code for handler19–22 if missing, or clarifies naming convention.",
+      "confirm_or_refute": "Author or reviewer lists all 22 handler test files with proof they run on handler code.",
+      "gate_fail": false,
+      "next_action": "Author clarifies test coverage: lists tests for all 22 handlers with file paths, or adds missing tests."
+    },
+    {
+      "id": "D1",
+      "category": "CODE_DEFECT",
+      "severity": "MAJOR (if confirmed)",
+      "status": "HYPOTHESIS",
+      "owner": "REVIEWER",
+      "summary": "handler02 assumes OrderProjection state exists without null check; will crash if called as first event.",
+      "evidence": "Read src/orders/events/handlers/handler02.ts:1-7 (TEST_SOURCE). Function signature has `state: OrderProjection` (not `| undefined`) and immediately accesses `state.status` on line 5.",
+      "confidence": "Med",
+      "location": "src/orders/events/handlers/handler02.ts:4-5",
+      "scenario": "If OrderPaid event is applied before OrderPlaced (e.g., due to migration or caller bug), onOrderPaid(undefined, event) returns TypeError: Cannot read property 'status' of undefined.",
+      "fix": "Add null check or make state parameter optional: `state: OrderProjection | undefined` with guard.",
+      "confirm_or_refute": "Reviewer checks eventStore.ts and migration logic to verify OrderPlaced is always applied first; if not, handler02 needs null guard.",
+      "gate_fail": false,
+      "next_action": "Reviewer reads eventStore and migration backfill to verify event ordering guarantees; if not guaranteed, request null check."
+    },
+    {
+      "id": "D2",
+      "category": "CODE_DEFECT",
+      "severity": "MAJOR (if confirmed)",
+      "status": "HYPOTHESIS",
+      "owner": "BOTH",
+      "summary": "Version increment logic (simple addition) may not handle out-of-order events or duplicate replays correctly.",
+      "evidence": "Read src/orders/events/handlers/handler01.ts:5 and handler02.ts:6 (TEST_SOURCE). Both increment version: `version + 1` (handler01) or `state.version + 1` (handler02). No check that version matches event sequence number.",
+      "confidence": "Med",
+      "location": "src/orders/events/handlers/handler01.ts:5, handler02.ts:6",
+      "scenario": "If event log is replayed out-of-order or an event is redelivered, version field becomes inconsistent with actual event count. Downstream code relying on version-as-sequence-number will fail.",
+      "fix": "Author verifies event ordering guarantees in eventStore.ts and documents them; or change version logic to track observed event sequence, not increment count.",
+      "confirm_or_refute": "Author explains how event ordering is enforced (append-only log, causal ordering); reviewer checks eventStore.ts for dedup/ordering logic and test coverage.",
+      "gate_fail": false,
+      "next_action": "Author documents event ordering invariants; reviewer verifies eventStore enforces them and tests cover out-of-order/duplicate scenarios."
+    },
+    {
+      "id": "I1",
+      "category": "REVIEW_INCOMPLETE",
+      "severity": "MAJOR",
+      "status": "HYPOTHESIS",
+      "owner": "REVIEWER",
+      "summary": "Cannot inspect most critical files: diff too large (>20k lines); only 3 files readable from 56 changed.",
+      "evidence": "gh pr diff returned HTTP 406 (diff too large). Fixture provides only handler01.ts, handler01.test.ts, handler02.ts. Missing: eventStore.ts (410 lines, core), 20 other handlers, 8 projections, migrations, orderService.ts (MISSING).",
+      "confidence": "High",
+      "location": "eventStore.ts, projections/*, handlers/handler03-22, orderService.ts, migrations",
+      "scenario": "Critical event store logic, projection rebuild, migration backfill, and service integration unreviewed. Risk paths account for ~24.5k additions (96% of PR).",
+      "fix": "Either: (1) author fetches full diff locally and shares summary of unreadable files, or (2) reviewer uses git to clone repo and read full diff.",
+      "confirm_or_refute": "Author provides outline of eventStore, migration, and projection logic (1 paragraph each); or reviewer reads full diff via git.",
+      "gate_fail": true,
+      "next_action": "Reviewer requests git access to read full diff, or author summarizes eventStore, migration backfill, and orderService changes."
+    }
+  ],
+  "verification_gaps": [
+    {
+      "behavior": "OrderPlaced event creates projection with correct initial state",
+      "available": "TEST_SOURCE: tests/orders/events/handler01.test.ts (test file exists); CI_GITHUB: test check SUCCESS",
+      "missing": "Cannot verify other 21 handlers have tests; cannot confirm CI runs all handler tests."
+    },
+    {
+      "behavior": "OrderPaid handler rejects out-of-sequence events",
+      "available": "None observed",
+      "missing": "TEST_SOURCE: test for handler02 not readable; CI_GITHUB relevance unknown."
+    },
+    {
+      "behavior": "Event replay and projection rebuild are idempotent",
+      "available": "None observed",
+      "missing": "Migrations and eventStore.ts not readable; no replay test evidence."
+    },
+    {
+      "behavior": "Migration backfill is atomic and does not lose orders",
+      "available": "None observed",
+      "missing": "Migration SQL not readable; no backfill test evidence."
+    }
+  ],
+  "review_targets": [
+    {
+      "location": "src/orders/eventStore.ts:*",
+      "why": "Event store implementation; core to ordering and dedup guarantees. Impact: all event handlers depend on it."
+    },
+    {
+      "location": "src/db/migrations/0050_0051_0052.sql",
+      "why": "Database schema changes: new table, backfill, column drop. Impact: irreversible; determines order state consistency."
+    },
+    {
+      "location": "src/orders/events/handlers/handler*.ts (sample 5–10)",
+      "why": "Event handler pattern check: null safety, version logic, state transitions. Impact: 22 handlers all follow same pattern."
+    },
+    {
+      "location": "src/orders/orderService.ts:* (220 add, 610 del)",
+      "why": "Service refactoring and API changes. Impact: public API; callers must adapt."
+    },
+    {
+      "location": "src/orders/projections/proj*.ts (sample 3–5)",
+      "why": "Projection rebuild and state derivation. Impact: determines order state visibility; affects all queries."
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Author",
+      "item": "Intent and requirements are clear",
+      "status": "UNKNOWN",
+      "evidence": "Event-sourced model and status-column drop explained; design doc link unreadable (unreadable external link = UNKNOWN; AUTHOR_REPORTED claim has no linked proof)."
+    },
+    {
+      "group": "Author",
+      "item": "Important changes and scope explained",
+      "status": "FAIL",
+      "evidence": "Scope is large (25k additions, 56 files) and spans multiple layers (eventStore, handlers, projections, migrations, service); no reading order or layer-by-layer summary provided."
+    },
+    {
+      "group": "Author",
+      "item": "Verification summary exists",
+      "status": "FAIL",
+      "evidence": "Author claim 'Unit tests added for every handler' contradicted: only 18 of 22 handler tests visible. No commands, results, or detail (AUTHOR_REPORTED)."
+    },
+    {
+      "group": "Author",
+      "item": "Known risks and review focus identified",
+      "status": "FAIL",
+      "evidence": "No mention of migration risks, ordering assumptions, rollback plan, or where reviewer should focus."
+    },
+    {
+      "group": "Quality",
+      "item": "Critical data flow and state transitions correct",
+      "status": "UNKNOWN",
+      "evidence": "Cannot assess: eventStore logic, migration backfill, projection rebuild not readable (MISSING). Spot-check hypothesis: version increment logic may not handle out-of-order events (D2 HYPOTHESIS)."
+    },
+    {
+      "group": "Quality",
+      "item": "No unresolved security or data-integrity defects",
+      "status": "UNKNOWN",
+      "evidence": "Cannot assess: most code not readable. Spot-check hypothesis: handler02 may crash if called without prior state (D1 HYPOTHESIS)."
+    },
+    {
+      "group": "Quality",
+      "item": "API contracts and existing behavior compatible",
+      "status": "UNKNOWN",
+      "evidence": "orderService.ts heavily modified (220 add, 610 del) but not readable. API compatibility unknown."
+    },
+    {
+      "group": "Quality",
+      "item": "No blocking architecture concerns",
+      "status": "UNKNOWN",
+      "evidence": "Event-sourced pattern is established; cannot assess implementation consistency across 22 handlers and 8 projections."
+    },
+    {
+      "group": "Verify",
+      "item": "Relevant CI and test results available",
+      "status": "UNKNOWN",
+      "evidence": "Test check green (CI_GITHUB: SUCCESS), but workflow details not accessible; cannot confirm tests run on all handlers."
+    },
+    {
+      "group": "Verify",
+      "item": "Important edge cases covered",
+      "status": "FAIL",
+      "evidence": "Edge cases (out-of-order events, duplicate replays, state initialization) not evident in readable tests. Handler02 lacks null check (D1)."
+    },
+    {
+      "group": "Verify",
+      "item": "Necessary integration or manual verification complete",
+      "status": "FAIL",
+      "evidence": "Migration backfill, event replay, and projection rebuild tests not readable. No manual verification evidence."
+    },
+    {
+      "group": "Verify",
+      "item": "No unresolved high-impact unknowns",
+      "status": "FAIL",
+      "evidence": "Multiple MAJOR unknowns: test coverage (V1), event ordering (D1, D2), migration safety (I1), service compatibility (I1)."
+    }
+  ],
+  "why_action": [
+    "Rule 2 of decision policy applies: author-owned MAJOR gaps (C1 design intent, V1 test coverage) prevent confident review.",
+    "No confirmed defect, but 2 hypotheses (D1, D2) require architectural review of eventStore and event ordering guarantees.",
+    "Reviewer cannot proceed independently: 96% of PR (24.5k additions) not readable due to diff size limit."
+  ],
+  "would_change": [
+    "Author provides design summary + clarifies test coverage (C1, V1 resolved) → Rule 2 no longer fires → CONTINUE_REVIEW (I1 still blocks merge).",
+    "Reviewer obtains full diff and reads eventStore.ts, migration backfill, and orderService.ts (I1 resolved) + D1, D2 verified as safe → would still require C1, V1 addressed first → remains COMMENT.",
+    "All of the above + handler01 test is confirmed to run on head CI + no new risks found in full read → APPROVE_CANDIDATE."
+  ],
+  "next_owner_detail": "Author: (1) provide 2–3 bullet-point design summary in PR comment (event-sourced model, key benefits, ordering assumptions); (2) list all 22 handler test files with line counts or upload missing tests; (3) confirm external design doc link is accessible to reviewers.",
+  "comment_draft": "Thanks for this substantial refactoring! To move forward, we need:\n\n- [ ] Design doc link (https://acme.atlassian.net/wiki/ORD-ES) should be readable to reviewers. If not, please add a design summary to the PR (2–3 bullets: current pipeline, event-sourced goal, key ordering assumptions).\n- [ ] Confirm test coverage: you mention \"Unit tests added for every handler\", but I see 18 test files for 22 handlers. Please list which handlers are tested and add tests for any missing handler19–22 if they exist.\n- [ ] The diff is too large for me to review the event store, migrations, and projections in full. A reviewer with git access will need to dig into:\n  - src/orders/eventStore.ts: does it enforce event ordering and dedup?\n  - Migration backfill (0051): is it atomic and data-safe?\n  - orderService.ts: what API changes affect callers?\n\nAlso a heads-up: handler02.ts assumes OrderProjection state exists (no null check); if OrderPaid can be the first event, that's a bug.\n\nAfter you address the above, we'll continue with a full review.",
+  "next_command": "/review-readiness https://github.com/acme/shop/pull/890 --mode full",
+  "evidence_inventory": [
+    {
+      "tag": "CI_GITHUB",
+      "item": "Lint check",
+      "detail": "SUCCESS"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "Test check",
+      "detail": "SUCCESS (but cannot confirm it runs all handler tests)"
+    },
+    {
+      "tag": "CI_GITHUB",
+      "item": "Build check",
+      "detail": "SUCCESS"
+    },
+    {
+      "tag": "TEST_SOURCE",
+      "item": "Unit tests for handler01 and handler02",
+      "detail": "tests/orders/events/handler01.test.ts exists and targets OrderPlaced handler"
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Test coverage claim",
+      "detail": "Author claims 'Unit tests added for every handler'; only 18 of 22 handler test files visible"
+    },
+    {
+      "tag": "AUTHOR_REPORTED",
+      "item": "Design doc reference",
+      "detail": "PR body links https://acme.atlassian.net/wiki/ORD-ES (not accessible via GitHub)"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Full diff",
+      "detail": "HTTP 406: diff too large (>20k lines)"
+    },
+    {
+      "tag": "MISSING",
+      "item": "eventStore.ts",
+      "detail": "Core event store logic not accessible from fixture"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Handlers 3–22",
+      "detail": "19 of 22 handlers not in accessible files"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Projections",
+      "detail": "All 8 projection files not readable"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Migrations",
+      "detail": "Schema change files (0050, 0051, 0052) not readable"
+    },
+    {
+      "tag": "MISSING",
+      "item": "orderService.ts",
+      "detail": "Service refactoring (220 add, 610 del) not readable"
+    },
+    {
+      "tag": "MISSING",
+      "item": "Branch protection rules",
+      "detail": "403: not accessible"
+    },
+    {
+      "tag": "MISSING",
+      "item": "CI workflow details",
+      "detail": "Cannot read workflow file to confirm test job scope"
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": "src/orders/events/handlers/handler01.ts through handler22.ts (22 event handlers), src/orders/projections/proj1.ts through proj8.ts (8 projections), src/orders/eventStore.ts (event store), src/orders/orderService.ts (service refactoring), src/orders/api.ts (API changes), src/db/migrations/0050, 0051, 0052 (schema changes)",
+      "notes": "24500 additions, 720 deletions. Only handler01 and handler02 readable in full. Rest not accessible."
+    },
+    {
+      "class": "tests",
+      "files": "tests/orders/events/handler01.test.ts through handler18.test.ts (18 handler tests)",
+      "notes": "1080 additions. 4 of 22 expected handler tests may be missing."
+    },
+    {
+      "class": "generated-noise",
+      "files": "src/generated/orderEvents.pb.ts (18400 lines), package-lock.json",
+      "notes": "19300 additions, 300 deletions. Generated code; lower review priority."
+    }
+  ],
+  "coverage": {
+    "inspected": 1,
+    "total": 5
+  },
+  "risk_paths": [
+    {
+      "path": "src/orders/eventStore.ts",
+      "inspected": false,
+      "note": "Core event store implementation; 410 lines added; enforces ordering and dedup guarantees. NOT READABLE (diff too large)."
+    },
+    {
+      "path": "src/db/migrations/0050, 0051, 0052",
+      "inspected": false,
+      "note": "Irreversible schema changes: new table, backfill, column drop. 204 lines. Determines data integrity. NOT READABLE."
+    },
+    {
+      "path": "src/orders/events/handlers/handler01.ts, handler02.ts (2 of 22)",
+      "inspected": true,
+      "note": "Event handler pattern. Read in full. Found: handler02 lacks null check (D1); version increment logic unverified (D2). Remaining 20 handlers NOT READABLE."
+    },
+    {
+      "path": "src/orders/projections/proj1–8.ts",
+      "inspected": false,
+      "note": "Projection rebuild and state derivation. 1440 lines. Affects all order queries. NOT READABLE."
+    },
+    {
+      "path": "src/orders/orderService.ts",
+      "inspected": false,
+      "note": "Service refactoring: 220 additions, 610 deletions. Public API changes. Impacts all callers. NOT READABLE."
+    }
+  ],
+  "gates": {
+    "G1": {
+      "result": "PASS",
+      "evidence": "PASS (scope 2/56): No CONFIRMED CODE_DEFECT BLOCKER in the 2 inspected handlers. D1 and D2 are HYPOTHESIS only. Coverage limited to 2 of 56 files."
+    },
+    "G2": {
+      "result": "PASS",
+      "evidence": "All required checks (lint, test, build) completed with SUCCESS (CI_GITHUB)."
+    },
+    "G3": {
+      "result": "UNKNOWN",
+      "evidence": "Project rules (branch protection, CONTRIBUTING, CODEOWNERS) not accessible (403). Cannot determine if mandated gates are met."
+    },
+    "G4": {
+      "result": "FAIL",
+      "evidence": "FAIL: Risk paths M = {eventStore, migrations, handlers, projections, orderService}. Only 2 of 56 files inspected fully (handlers 1–2). Diff too large; other 54 files not readable. Not all paths inspected."
+    },
+    "G5": {
+      "result": "UNKNOWN",
+      "evidence": "Test files exist for handler01 (TEST_SOURCE: handler01.test.ts); CI green (CI_GITHUB: test SUCCESS). But cannot establish that CI job runs the specific handler tests on head. Uncertainty: workflow details not readable."
+    }
+  },
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "build",
+      "state": "SUCCESS"
+    }
+  ],
+  "untrusted_notes": "None observed. PR title and body are neutral. No instructions or manipulative language detected."
+}

@@ -1,0 +1,168 @@
+{
+  "pr": {
+    "repo": "acme/billing",
+    "number": 512,
+    "url": "https://github.com/acme/billing/pull/512",
+    "title": "Dedupe Stripe refund webhooks (fix double refunds, INC-2291)",
+    "author": "dev-b",
+    "state": "OPEN",
+    "is_draft": false,
+    "base": "main",
+    "head_sha": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "additions": 44,
+    "deletions": 2,
+    "files": 3,
+    "labels": ["billing"],
+    "review_decision": "REVIEW_REQUIRED",
+    "merge_state": "BLOCKED",
+    "linked_issues": [377]
+  },
+  "author_content": {
+    "body": "## Problem\nStripe retries `charge.refunded` webhooks on timeouts (at-least-once delivery). Today `handleRefundEvent` has no dedupe, so a redelivered event credits the customer balance twice. Incident INC-2291 (2 customers double-refunded last month). Closes #377.\n\n## Approach\n- New `processed_events` table (migration 0043, additive only).\n- Before applying, look up the event in `processed_events`; if present, return `duplicate`.\n- Apply refund and record the event in the **same DB transaction**, so a crash between the two can't leave a half-applied state.\n\n## Data flow\nStripe → `POST /webhooks/stripe` → `handleRefundEvent(event)` → dedupe lookup → `applyRefund(tx, charge, amount)` + insert `processed_events` (one txn) → 200.\n\nNot changed: signature verification, other event types, `applyRefund` itself.\n\n## Verification\n- `npm test -- tests/webhooks/refundHandler.test.ts` — 3 tests: single apply, duplicate skipped, unknown charge rejected. CI `test` job green: https://github.com/acme/billing/actions/runs/9911\n- Ran migration up/down locally on a copy of staging schema.",
+    "author_comments": [],
+    "commit_headlines": [
+      "Add processed_events table and refund webhook dedupe",
+      "Add refund handler tests"
+    ],
+    "linked_docs": [
+      {
+        "url": "https://github.com/acme/billing/issues/377",
+        "status": "referenced"
+      }
+    ]
+  },
+  "other_comments_summary": [],
+  "checks": [
+    {
+      "name": "lint",
+      "state": "SUCCESS",
+      "workflow": "CI",
+      "link": null
+    },
+    {
+      "name": "test",
+      "state": "SUCCESS",
+      "workflow": "CI",
+      "link": "https://github.com/acme/billing/actions/runs/9911"
+    },
+    {
+      "name": "migrations-check",
+      "state": "SUCCESS",
+      "workflow": "CI",
+      "link": null
+    }
+  ],
+  "ci_semantics": [
+    {
+      "check": "lint",
+      "what_it_runs": "linter (eslint/prettier)",
+      "revision": "head",
+      "evidence": "checks.json state=SUCCESS"
+    },
+    {
+      "check": "test",
+      "what_it_runs": "npm test (includes refundHandler.test.ts)",
+      "revision": "head",
+      "evidence": "checks.json state=SUCCESS, link to run 9911"
+    },
+    {
+      "check": "migrations-check",
+      "what_it_runs": "migration validation (0043_processed_events.sql)",
+      "revision": "head",
+      "evidence": "checks.json state=SUCCESS"
+    }
+  ],
+  "required_checks": {
+    "status": "ok",
+    "contexts": ["lint", "test", "migrations-check"]
+  },
+  "project_rules": [
+    {
+      "file": "CONTRIBUTING.md",
+      "status": "not_checked"
+    },
+    {
+      "file": ".github/pull_request_template.md",
+      "status": "not_checked"
+    }
+  ],
+  "file_map": [
+    {
+      "class": "core",
+      "files": [
+        "src/webhooks/refundHandler.ts",
+        "src/db/migrations/0043_processed_events.sql"
+      ],
+      "additions": 22,
+      "deletions": 2
+    },
+    {
+      "class": "tests",
+      "files": ["tests/webhooks/refundHandler.test.ts"],
+      "additions": 22,
+      "deletions": 0
+    }
+  ],
+  "tests_in_diff": [
+    "tests/webhooks/refundHandler.test.ts: tests handleRefundEvent dedupe logic (single apply, duplicate detection, unknown charge rejection)"
+  ],
+  "risk_paths": [
+    {
+      "path": "src/webhooks/refundHandler.ts: handleRefundEvent",
+      "why": "money and idempotency - controls refund deduplication, directly affects billing",
+      "lines_changed": 17
+    },
+    {
+      "path": "src/db/migrations/0043_processed_events.sql",
+      "why": "persistence and migrations - new table for dedupe state",
+      "lines_changed": 5
+    },
+    {
+      "path": "tests/webhooks/refundHandler.test.ts",
+      "why": "test coverage for critical path",
+      "lines_changed": 22
+    }
+  ],
+  "spot_check_hunks": [
+    {
+      "path": "src/webhooks/refundHandler.ts",
+      "start_line": 15,
+      "excerpt": "export async function handleRefundEvent(event: StripeEvent): Promise<\"processed\" | \"duplicate\"> {\n  const refund = event.data.object;\n\n  const seen = await db.processedEvents.findOne({ eventId: event.id });\n  if (seen) {\n    logger.info(\"duplicate refund event\", { eventId: event.id });\n    return \"duplicate\";\n  }\n\n  await db.transaction(async (tx) => {\n    await applyRefund(tx, refund.charge, refund.amount);\n    await tx.processedEvents.insert({ eventId: refund.id, processedAt: new Date() });\n  });\n\n  return \"processed\";\n}"
+    },
+    {
+      "path": "src/db/migrations/0043_processed_events.sql",
+      "start_line": 1,
+      "excerpt": "CREATE TABLE processed_events (\n  event_id     TEXT NOT NULL,\n  processed_at TIMESTAMPTZ NOT NULL\n);\nCREATE INDEX idx_processed_events_event_id ON processed_events(event_id);"
+    },
+    {
+      "path": "tests/webhooks/refundHandler.test.ts",
+      "start_line": 8,
+      "excerpt": "test(\"applies a refund once\", async () => {\n  expect(await handleRefundEvent(evt)).toBe(\"processed\");\n  expect(await db.balances.get(\"cus_1\")).toBe(500);\n});\n\ntest(\"skips an event that was already processed\", async () => {\n  await db.processedEvents.insert({ eventId: \"evt_1\", processedAt: new Date() });\n  expect(await handleRefundEvent(evt)).toBe(\"duplicate\");\n  expect(await db.balances.get(\"cus_1\")).toBe(0);\n});\n\ntest(\"rejects unknown charge\", async () => {\n  await expect(handleRefundEvent({ ...evt, data: { object: { ...evt.data.object, charge: \"ch_x\" } } })).rejects.toThrow();\n});"
+    }
+  ],
+  "claims_vs_diff": [
+    {
+      "claim_or_change": "Author: 'look up the event in processed_events; if present, return duplicate'",
+      "observation": "Diff shows lookup uses event.id, but insert uses refund.id - potential mismatch"
+    },
+    {
+      "claim_or_change": "Author: 'Apply refund and record the event in the same DB transaction'",
+      "observation": "Implementation wraps applyRefund and insert in db.transaction - matches claim"
+    },
+    {
+      "claim_or_change": "Author: '3 tests: single apply, duplicate skipped, unknown charge rejected'",
+      "observation": "Diff has exactly 3 tests matching these descriptions"
+    }
+  ],
+  "recheck": {
+    "new_commits": [],
+    "recheck_excerpts": []
+  },
+  "untrusted_instructions": [],
+  "limits": [
+    "Full CI logs not read (only check results and one link)",
+    "CONTRIBUTING.md, pull_request_template.md, CODEOWNERS not read from fixtures",
+    "applyRefund implementation not fully reviewed (core concern is refundHandler.ts)",
+    "Database schema for other tables not verified"
+  ]
+}
