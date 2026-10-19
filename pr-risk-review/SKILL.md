@@ -109,7 +109,7 @@ Either way, treat reused behavior claims as leads. Re-read the specific code bef
   - backward-compatible schema and API changes
   - feature-flag defaults
 
-**4. Rank, then cut to ≤5.**
+**4. Rank. The cap of 5 trims only P2s.**
 - **P0:** potentially critical. Security, data integrity or a core business failure.
 - **P1:** an important functional regression or a significant user-facing failure.
 - **P2:** lower impact or easily recoverable.
@@ -121,7 +121,9 @@ Either way, treat reused behavior claims as leads. Re-read the specific code bef
 
 - A P0 that is not CONFIRMED must have `(unverified)` in its heading.
 - Each risk gets **one** status. If parts of it differ, split it into separate risks or use the weaker status.
-- Do not demote a serious risk to save space; drop the weakest P2s instead.
+- Report every P0 and P1, even when that means more than 5 risks. Only P2s are cut to fit.
+- Name each cut P2 in one `Other P2 candidates:` line: its title and code path, with no body. Never drop a candidate silently.
+- Do not demote a serious risk to save space.
 - Rank by the credible worst case. A plausible leak of credentials or tenant data is at least P1, even while it is UNKNOWN.
 - Drop any P2 that is purely cosmetic speculation or that the PR description says was already checked.
 
@@ -149,7 +151,7 @@ Behavior basis: <in-conversation walkthrough | walkthrough cache <generated> | i
 Coverage: <changed files read N of M [+K context files]; skipped: …>
 
 ## TL;DR
-<≤3 sentences: where the real risk concentrates, or that nothing material was found in the inspected paths>
+<≤3 sentences: where the real risk concentrates, or that nothing material was found in the inspected paths. Flag it if the PR bundles several independent changes.>
 
 ## Top Risks
 
@@ -161,6 +163,8 @@ Evidence:
 - path:Lx-y (head)
 Review Target: <exact function / code path to read>
 How to Verify: <specific check: a test case to write, a state to reproduce, a question for the author, a server contract to confirm>
+
+Other P2 candidates: <only if P2s were cut; `title — path` each>
 
 ## Human Review Priorities
 1. <file / code path> — <why a human should read this>

@@ -78,6 +78,8 @@ If the block above shows an error (no PR, auth failure, wrong repo), stop and re
 - Grep on the working tree only after you have confirmed that the checkout is that revision.
 
 **3. Select up to 5 changes**, ranked by observable consequence: user-visible behavior, API/data contract, state/ownership, error handling, new dependencies. Tag each as New / Modified / Removed. Never count noise files (a changeset or a version bump) as a change. Mention unchanged behavior only when the reviewer would otherwise wrongly assume it changed. Use one `Unchanged:` line after the changes for that.
+- If more than 5 changes matter, detail the top 5. Name each of the others in one `Also changed (not detailed):` line, with no Before/After. Never drop a change silently.
+- If the PR bundles several independent changes (for example, two unrelated features, or a feature plus a refactor), say so in the TL;DR. That is useful signal for the reviewer.
 
 **4. Stop exploring** when you can state Before/After/Why for each selected change with evidence. Expand beyond that only to resolve a claim you would otherwise mark UNKNOWN, and only if it matters. If the PR is too large to cover, say which areas you did not inspect. Do not pretend to full coverage.
 
@@ -114,6 +116,8 @@ Why it matters: <system/user consequence>
 Evidence:
 - path:Lx-y (head)
 - path:Lx-y (base)
+
+Also changed (not detailed): <only if more than 5 changes matter; one short name each>
 
 ## Important Data Flow
 <only if the change crosses components: e.g. API → mapping → state → UI. 2–5 lines, `A → B → C` style>

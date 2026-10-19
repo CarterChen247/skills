@@ -54,5 +54,5 @@ Without `--save` nothing is written. Each skill works without the other and with
 - Reading is tiered: the file list first, then core diffs file by file, then base versions, direct callers and related tests only when a claim needs them.
 - Noise files (lockfiles, generated code, snapshots) are skipped. The full diff is fetched only for PRs under about 400 lines.
 - There are no subagents, no HTML, and no tests are run.
-- Output is capped at 5 changes or 5 risks, with a `Coverage:` line that says what was not read.
+- Output is capped at 5 detailed changes or 5 risks. Anything past the cap is still named on one line (`Also changed` or `Other P2 candidates`). P0 and P1 risks are never cut. A `Coverage:` line says what was not read.
 - Security-sensitive paths are exempt from the budget, so critical risks are never dropped to save tokens.
